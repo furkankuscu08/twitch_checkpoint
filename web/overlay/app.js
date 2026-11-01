@@ -79,22 +79,24 @@ function renderBadge(animateId = null) {
   }));
 }
 
-function updateWords(node, text) {
+function updateWords(node, text, animate = true) {
   if (node.textContent === text) return;
   const old = node.textContent.match(/\S+|\s+/g) || [];
   const tokens = text.match(/\S+|\s+/g) || [];
   let common = 0;
   while (common < old.length && old[common] === tokens[common]) common++;
   node.replaceChildren(...tokens.map((token, index) => /\S/.test(token)
-    ? element('span', `word${index >= common ? ' new' : ''}`, token)
+    ? element('span', `word${animate && index >= common ? ' new' : ''}`, token)
     : document.createTextNode(token)));
 }
 
-function updateAnswer() {
+function updateAnswer(animate = true) {
   if (!model.card || visibleCard?.exiting || visibleCard?.id !== model.card.id) return;
   $('echo-text').textContent = model.card.echo_text;
-  updateWords($('final-text'), model.card.final_text);
-  updateWords($('partial-text'), model.card.partial_text);
+  updateWords($('final-text'), model.card.final_text, animate);
+  updateWords($('partial-text'), model.card.partial_text, animate);
+  $('answer-separator').textContent = model.card.final_text && model.card.partial_text
+    && !/\s$/.test(model.card.final_text) && !/^\s/.test(model.card.partial_text) ? ' ' : '';
   $('caret').hidden = !model.card.partial_text;
   const clip = document.querySelector('.answer-clip');
   clip.scrollTop = clip.scrollHeight;
@@ -130,7 +132,8 @@ function showCard(animate = true) {
   const final = element('span'); final.id = 'final-text';
   const partial = element('span'); partial.id = 'partial-text';
   const caret = element('span'); caret.id = 'caret'; caret.hidden = true;
-  line.append(final, partial, caret); clip.append(line);
+  const separator = element('span'); separator.id = 'answer-separator';
+  line.append(final, separator, partial, caret); clip.append(line);
   const grace = element('div'); grace.id = 'grace'; grace.hidden = true;
   grace.setAttribute('aria-label', 'Answer closing countdown');
   area.append(echo, clip, grace);
@@ -146,7 +149,7 @@ function showCard(animate = true) {
     setTimeout(() => flight.remove(), 520);
   }
   visibleCard = { id: card.id, node, exiting: false };
-  updateAnswer(); renderBadge();
+  updateAnswer(animate); renderBadge();
 }
 
 function finishExit(freeze = false) {
@@ -268,7 +271,7 @@ function receive(event, { freezeExit = false } = {}) {
       break;
     case 'earlier_sent':
       if (typeof event.user_name === 'string' && Number.isFinite(event.ago_min)) {
-        $('earlier-toast').textContent = `📌 @${event.user_name} ← your answer from ${event.ago_min} min ago`;
+        $('earlier-toast').replaceChildren(element('span', 'diamond'), document.createTextNode(` @${event.user_name} ← your answer from ${event.ago_min} min ago`));
         $('earlier-toast').hidden = false; toastUntil = now() + FEEDBACK_MS / 1000;
       }
       break;

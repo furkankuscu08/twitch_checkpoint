@@ -28,7 +28,6 @@ html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background:
 .answer-clip { overflow: hidden; max-height: 117px; }
 .answer-lines { font-size: 27px; line-height: 1.44; font-weight: 500; letter-spacing: -.5px; overflow-wrap: anywhere; margin: 0; padding-right: var(--cp-space-6); }
 #partial-text { opacity: .58; }
-#partial-text:not(:empty)::before { content: " "; }
 .word.new { animation: word-in 160ms ease-out both; }
 #caret { display: inline-block; width: 2px; height: 24px; background: var(--cp-accent); margin-left: var(--cp-space-1); vertical-align: -3px; }
 #grace { position: absolute; right: 0; bottom: 6px; width: 28px; height: 28px; border-radius: 50%; background: conic-gradient(var(--cp-accent) var(--remaining, 100%), var(--cp-border-strong) 0); }

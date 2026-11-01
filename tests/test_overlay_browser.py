@@ -172,6 +172,9 @@ def test_echo_partial_grace_summary_and_success_feedback(overlay):
             grace_until=1002.5,
         ),
     )
+    expect(page.locator(".answer-lines")).to_have_text(
+        "I use a custom theme. The font is"
+    )
     expect(page.locator("#grace")).to_be_visible()
     before = float(page.locator("#grace").get_attribute("data-remaining"))
     page.clock.run_for(1000)
@@ -221,6 +224,7 @@ def test_next_card_waits_for_stamp_and_snapshot_reconnect_restores_without_exit(
     emit(page, data)
     expect(page.locator("#final-text")).to_have_text("Restored exactly.")
     assert page.locator(".exiting").count() == 0
+    assert page.locator(".word.new").count() == 0
     assert page.locator("#stamp").is_hidden()
 
 
