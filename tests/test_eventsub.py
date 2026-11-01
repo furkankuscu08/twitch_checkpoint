@@ -20,7 +20,7 @@ def welcome(session):
     )
 
 
-def notification(message_id="delivery", text="!mine"):
+def notification(message_id="delivery", text="Hello chat"):
     return json.dumps(
         {
             "metadata": {

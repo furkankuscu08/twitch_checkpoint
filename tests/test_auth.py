@@ -459,7 +459,9 @@ def test_wrong_stored_bot_is_rejected_before_network_or_rotation(
 
     async def scenario():
         async with httpx.AsyncClient() as client:
-            manager = auth.TwitchAuth(client, "client-id", {"bot": "checkpoint_bott"}, path)
+            manager = auth.TwitchAuth(
+                client, "client-id", {"bot": "checkpoint_bott"}, path
+            )
             with pytest.raises(auth.AuthError, match="checkpoint_bott") as error:
                 if operation == "saved_account":
                     manager.saved_account("bot")

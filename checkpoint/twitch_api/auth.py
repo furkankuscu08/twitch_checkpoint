@@ -18,6 +18,8 @@ TOKEN_PATH = ROOT / "data" / "tokens.json"
 DEVICE_URL = "https://id.twitch.tv/oauth2/device"
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 VALIDATE_URL = "https://id.twitch.tv/oauth2/validate"
+# Verified 2026-11-01: chat read and write permissions for a user-token bot.
+# https://dev.twitch.tv/docs/authentication/scopes/
 SCOPES = {
     "bot": ("user:read:chat", "user:write:chat"),
     "test": ("user:write:chat",),
@@ -108,7 +110,7 @@ class TwitchAuth:
         return data
 
     def saved_account(self, account: str) -> dict:
-        self.login_name(account)
+        expected = self.login_name(account)
         record = self.read_tokens().get(account)
         if not record or not all(
             isinstance(record.get(key), str) and record[key]
@@ -116,6 +118,12 @@ class TwitchAuth:
         ):
             raise AuthError(
                 f"No token pair for {account}; run device-code login first."
+            )
+        login = record.get("login")
+        if not isinstance(login, str) or login.lower() != expected:
+            raise AuthError(
+                f"Stored token does not match {expected}; run device-code login: "
+                f"uv run python -m checkpoint.twitch_api.auth --account {account}"
             )
         return record
 
@@ -152,8 +160,8 @@ class TwitchAuth:
             ) from None
 
     async def checked_identity(self, account: str, access_token: str) -> dict:
-        # Verified 2026-10-29: GET /validate accepts Authorization: OAuth <token>.
-        # Call at session startup and hourly in the WP9 integration.
+        # Verified 2026-11-01: GET /validate accepts Authorization: OAuth <token>.
+        # Call at session startup and hourly in the WP3 integration.
         # https://dev.twitch.tv/docs/authentication/validate-tokens/
         response = await self.request(
             "GET", VALIDATE_URL, headers={"Authorization": f"OAuth {access_token}"}
@@ -200,7 +208,7 @@ class TwitchAuth:
     async def login(self, account: str, on_code: Callable[[str, str], None]) -> dict:
         self.login_name(account)
         async with self.locks[account]:
-            # Verified 2026-10-29: Public client, no secret or redirect URI.
+            # Verified 2026-11-01: Public client, no secret or redirect URI.
             # /device and device-token exchange examples use multipart fields:
             # client_id, scopes; exchange adds device_code and the RFC grant_type.
             # https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#device-code-grant-flow
@@ -276,7 +284,7 @@ class TwitchAuth:
             ):
                 checked = await self.checked_identity(account, record["access_token"])
                 return {**record, **checked}
-            # Verified 2026-10-30: Public-client refresh needs no client_secret;
+            # Verified 2026-11-01: Public-client refresh needs no client_secret;
             # form encoding escapes refresh tokens. Public DCF refresh tokens are
             # single-use, expire after 30 days, and must be replaced after refresh.
             # https://dev.twitch.tv/docs/authentication/refresh-tokens/
@@ -333,7 +341,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Authentication failed: {error}", file=sys.stderr)
         if args.refresh:
             print(
-                "Run device-code login: uv run python -m minefield.twitch_api.auth "
+                "Run device-code login: uv run python -m checkpoint.twitch_api.auth "
                 f"--account {args.account}",
                 file=sys.stderr,
             )

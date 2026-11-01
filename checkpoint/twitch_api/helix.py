@@ -20,7 +20,7 @@ class Helix:
         self.bot_id = None
 
     async def request(self, method, path, **kwargs):
-        # Verified 2026-10-30: Helix user token + matching Client-Id.
+        # Verified 2026-11-01: Helix user token + matching Client-Id.
         # https://dev.twitch.tv/docs/api/reference/#create-eventsub-subscription
         # Only idempotent reads / subscription setup use authentication retry.
         async with asyncio.timeout(self.config.CHAT_SEND_TIMEOUT_S):
@@ -43,7 +43,7 @@ class Helix:
 
     async def initialize(self):
         checked = await self.auth.validate("bot")
-        # Verified 2026-10-30: repeated login parameters resolve IDs at runtime.
+        # Verified 2026-11-01: repeated login parameters resolve IDs at runtime.
         # https://dev.twitch.tv/docs/api/reference/#get-users
         response = await self.request(
             "GET",
@@ -63,7 +63,7 @@ class Helix:
             raise AuthError("Twitch bot identity mismatch.")
 
     async def subscribe(self, session_id):
-        # Verified 2026-10-30: channel.chat.message v1, user:read:chat token.
+        # Verified 2026-11-01: channel.chat.message v1, user:read:chat token.
         # https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage
         response = await self.request(
             "POST",
@@ -82,7 +82,7 @@ class Helix:
             raise AuthError("Twitch subscription failed.")
 
     async def send_message(self, message, account="bot"):
-        # Verified 2026-10-30: max 500 chars, sender matches the user token;
+        # Verified 2026-11-01: max 500 chars, sender matches the user token;
         # user:write:chat. No for_source_only with user tokens.
         # https://dev.twitch.tv/docs/api/reference/#send-chat-message
         try:

@@ -74,7 +74,7 @@ class EventSub:
         socket = None
         try:
             async with asyncio.timeout(self.config.TWITCH_IO_TIMEOUT_S):
-                # Verified 2026-10-30: outgoing traffic is forbidden except Pong.
+                # Verified 2026-11-01: outgoing traffic is forbidden except Pong.
                 # websockets answers server Ping automatically; disable own Ping.
                 # https://dev.twitch.tv/docs/eventsub/handling-websocket-events/
                 socket = await self.connect(
@@ -121,7 +121,7 @@ class EventSub:
                         data = receive.result()
                         kind = data["metadata"]["message_type"]
                         if kind == "session_reconnect" and handoff is None:
-                            # Verified 2026-10-30: keep old reader alive until new
+                            # Verified 2026-11-01: keep old reader alive until new
                             # welcome. Carried subscriptions must not be recreated.
                             # https://dev.twitch.tv/docs/eventsub/handling-websocket-events/#reconnect-message
                             url = data["payload"]["session"]["reconnect_url"]

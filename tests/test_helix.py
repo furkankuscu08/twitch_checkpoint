@@ -23,6 +23,7 @@ def manager(client, tmp_path):
             "access_token": "access-secret",
             "refresh_token": "refresh-secret",
             "user_id": "20",
+            "login": "bot",
         },
     )
     return auth
