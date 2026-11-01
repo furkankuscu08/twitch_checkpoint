@@ -5,7 +5,7 @@ import asyncio
 import httpx
 import pytest
 
-from minefield.twitch_api.auth import TOKEN_PATH, TwitchAuth, settings
+from checkpoint.twitch_api.auth import TOKEN_PATH, TwitchAuth, settings
 
 
 @pytest.mark.live

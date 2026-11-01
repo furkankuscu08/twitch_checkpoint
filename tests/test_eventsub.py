@@ -6,8 +6,8 @@ from dataclasses import replace
 import httpx
 import pytest
 
-from minefield.core.config import Config
-from minefield.twitch_api.eventsub import EventSub
+from checkpoint.core.config import Config
+from checkpoint.twitch_api.eventsub import EventSub
 
 
 def packet(kind, **payload):

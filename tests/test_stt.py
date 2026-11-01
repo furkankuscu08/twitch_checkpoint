@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from minefield.core.config import Config
-from minefield.stt.audio import AudioInput, wav_chunks
-from minefield.stt.backends import Mapper, connection_url
-from minefield.stt.engine import Engine
+from checkpoint.core.config import Config
+from checkpoint.stt.audio import AudioInput, wav_chunks
+from checkpoint.stt.backends import Mapper, connection_url
+from checkpoint.stt.engine import Engine
 
 FIXTURES = Path(__file__).parent / "fixtures/deepgram"
 
@@ -106,9 +106,9 @@ def test_nova_late_utterance_end_does_not_finalize_new_speech():
 
 
 def test_nova_exact_duplicate_cannot_confirm_but_distinct_same_words_can():
-    from minefield.core.deck import Deck
-    from minefield.core.game import Game
-    from minefield.core.matcher import Matcher
+    from checkpoint.core.deck import Deck
+    from checkpoint.core.game import Game
+    from checkpoint.core.matcher import Matcher
 
     message = next(
         row["message"]
@@ -326,7 +326,7 @@ def test_missing_flux_end_of_turn_is_not_confirmation_for_next_turn():
 
 
 def test_cli_never_reads_real_dotenv_and_reports_missing_key(monkeypatch, capsys):
-    from minefield.stt import __main__ as cli
+    from checkpoint.stt import __main__ as cli
 
     calls = []
     monkeypatch.setattr(cli, "load_dotenv", lambda path: calls.append(path))
@@ -341,7 +341,7 @@ def test_cli_never_reads_real_dotenv_and_reports_missing_key(monkeypatch, capsys
 def test_failed_hypothesis_post_aborts_instead_of_retrying():
     import httpx
 
-    from minefield.stt.engine import SourceChanged
+    from checkpoint.stt.engine import SourceChanged
 
     async def scenario():
         posts = []
@@ -377,7 +377,7 @@ def test_failed_hypothesis_post_aborts_instead_of_retrying():
 def test_failed_final_aborts_its_own_id_once_before_session_cleanup(abort_response):
     import httpx
 
-    from minefield.stt.engine import SourceChanged
+    from checkpoint.stt.engine import SourceChanged
 
     async def scenario():
         posts = []
@@ -471,9 +471,9 @@ def test_mic_replacement_and_bad_frames_are_isolated():
 
 @pytest.mark.parametrize("backend", ["flux", "nova3"])
 def test_recorded_hypotheses_trigger_real_matcher_without_leaking_other_mines(backend):
-    from minefield.core.deck import Deck
-    from minefield.core.game import Game
-    from minefield.core.matcher import Matcher
+    from checkpoint.core.deck import Deck
+    from checkpoint.core.game import Game
+    from checkpoint.core.matcher import Matcher
 
     words = ("pineapple", "volcano", "banana")
     game = Game(

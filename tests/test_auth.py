@@ -7,7 +7,7 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from minefield.twitch_api import auth
+from checkpoint.twitch_api import auth
 
 DEVICE = "https://id.twitch.tv/oauth2/device"
 TOKEN = "https://id.twitch.tv/oauth2/token"
@@ -439,6 +439,35 @@ def test_failed_cli_refresh_prints_exact_device_login_command(
     respx_mock.post(TOKEN).respond(400, json={"message": "Invalid refresh token"})
     assert auth.main(["--account", "test", "--refresh"]) == 1
     assert (
-        "uv run python -m minefield.twitch_api.auth --account test"
+        "uv run python -m checkpoint.twitch_api.auth --account test"
         in capsys.readouterr().err
     )
+
+
+@pytest.mark.parametrize("stored_login", ["minefield_bot", "checkpoint_bot", None])
+@pytest.mark.parametrize("operation", ["saved_account", "validate", "refresh"])
+def test_wrong_stored_bot_is_rejected_before_network_or_rotation(
+    stored_login, operation, tmp_path, respx_mock
+):
+    original = seed_tokens(tmp_path)
+    if stored_login is None:
+        original["bot"].pop("login")
+    else:
+        original["bot"]["login"] = stored_login
+    path = tmp_path / "tokens.json"
+    path.write_text(json.dumps(original))
+
+    async def scenario():
+        async with httpx.AsyncClient() as client:
+            manager = auth.TwitchAuth(client, "client-id", {"bot": "checkpoint_bott"}, path)
+            with pytest.raises(auth.AuthError, match="checkpoint_bott") as error:
+                if operation == "saved_account":
+                    manager.saved_account("bot")
+                else:
+                    await getattr(manager, operation)("bot")
+            assert "checkpoint.twitch_api.auth --account bot" in str(error.value)
+            assert "access-secret" not in str(error.value)
+
+    asyncio.run(scenario())
+    assert not respx_mock.calls
+    assert json.loads(path.read_text()) == original

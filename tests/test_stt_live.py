@@ -13,8 +13,8 @@ import pytest
 import uvicorn
 import websockets
 
-from minefield.core.config import Config
-from minefield.server.app import create_app
+from checkpoint.core.config import Config
+from checkpoint.server.app import create_app
 
 pytestmark = pytest.mark.live
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +31,7 @@ def test_wav_cli_booms_reach_overlay_socket(backend):
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
         app = create_app(
-            config=replace(Config(), GAME_PORT=port, ARM_DELAY_S=0), debug=True
+            config=replace(Config(), APP_PORT=port, ARM_DELAY_S=0), debug=True
         )
         server = uvicorn.Server(uvicorn.Config(app, log_level="error"))
         serving = asyncio.create_task(server.serve(sockets=[listener]))
@@ -53,11 +53,11 @@ def test_wav_cli_booms_reach_overlay_socket(backend):
                 ) as overlay:
                     snapshot = json.loads(await overlay.recv())
                     assert all("word" not in mine for mine in snapshot["mines"])
-                    environ = dict(os.environ, GAME_PORT=str(port))
+                    environ = dict(os.environ, APP_PORT=str(port))
                     process = await asyncio.create_subprocess_exec(
                         sys.executable,
                         "-m",
-                        "minefield.stt",
+                        "checkpoint.stt",
                         "--wav",
                         str(wav),
                         "--backend",

@@ -6,9 +6,9 @@ from dataclasses import replace
 import httpx
 import pytest
 
-from minefield.core.config import Config
-from minefield.twitch_api.auth import TwitchAuth
-from minefield.twitch_api.helix import Helix
+from checkpoint.core.config import Config
+from checkpoint.twitch_api.auth import TwitchAuth
+from checkpoint.twitch_api.helix import Helix
 
 BASE = "https://api.twitch.tv/helix"
 

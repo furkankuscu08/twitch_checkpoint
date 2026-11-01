@@ -12,9 +12,9 @@ import pytest
 import uvicorn
 import websockets
 
-from minefield.core.config import Config
-from minefield.server.app import create_app
-from minefield.stt.engine import Engine
+from checkpoint.core.config import Config
+from checkpoint.server.app import create_app
+from checkpoint.stt.engine import Engine
 
 pytestmark = pytest.mark.browser
 
@@ -33,7 +33,7 @@ def test_fake_mic_frames_arrive_and_page_reconnects_after_engine_restart():
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
         mic_port = reservation.getsockname()[1]
-    config = replace(Config(), GAME_PORT=game_port, STT_MIC_PORT=mic_port)
+    config = replace(Config(), APP_PORT=game_port, ENGINE_AUDIO_PORT=mic_port)
 
     class Connection:
         async def __aenter__(self):

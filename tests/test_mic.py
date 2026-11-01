@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from minefield.core.config import Config
-from minefield.server.app import create_app
+from checkpoint.core.config import Config
+from checkpoint.server.app import create_app
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,7 +55,7 @@ def test_resampler_sample_counts_continuity_clipping_and_silence():
 
 
 def test_mic_route_injects_engine_port_and_serves_worklet():
-    config = replace(Config(), STT_MIC_PORT=9876)
+    config = replace(Config(), ENGINE_AUDIO_PORT=9876)
     with TestClient(create_app(config=config)) as client:
         page = client.get("/mic")
         assert page.status_code == 200
