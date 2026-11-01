@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from dataclasses import replace
@@ -297,3 +298,41 @@ def test_entrypoint_loads_blocklist_and_config_outside_core(monkeypatch):
     runtime = captured[0].state.runtime
     assert "shit" in runtime.core.blocklist
     assert runtime.core.queue.excluded == {"checkpoint_bott", "izleyici0808"}
+
+
+@pytest.mark.parametrize("action", ["checkpoint", "next", "skip", "clear"])
+def test_bodyless_actions_reject_malformed_or_unexpected_input(action):
+    with TestClient(create_app()) as client:
+        assert client.post("/dock/" + action, content="not json").status_code == 422
+        assert (
+            client.post("/dock/" + action, json={"unexpected": "private"}).status_code
+            == 422
+        )
+        assert client.post("/dock/" + action).is_success
+
+
+def test_timed_out_delivery_does_not_hold_core_or_later_replies():
+    now, sent = [1000.0], []
+
+    async def sender(intent):
+        sent.append(intent)
+        if len(sent) == 1:
+            await asyncio.Future()
+        return {"is_sent": True}
+
+    app = create_app(
+        clock=lambda: now[0],
+        debug=True,
+        sender=sender,
+        config=replace(Config(), CHAT_SEND_TIMEOUT_S=0.02),
+    )
+    with TestClient(app) as client:
+        client.post("/dock/focus", json={"on": True})
+        inject(client)
+        inject(client, "second")
+        client.post("/dock/checkpoint")
+        client.post("/dock/typed", json={"text": "First answer."})
+        client.post("/dock/typed", json={"text": "Second answer."})
+        assert app.state.runtime.core.summary["answered"] == 2
+        advance(client, app, now, 1005)
+        assert len(sent) == 2 and app.state.runtime.core.card is None

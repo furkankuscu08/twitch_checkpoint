@@ -179,7 +179,7 @@ def create_app(
         return {"ok": True}
 
     def action(name):
-        async def route():
+        async def route(body: Input | None = None):
             runtime.emit(getattr(runtime.core, name)(now=clock()))
             return {"ok": True}
 
