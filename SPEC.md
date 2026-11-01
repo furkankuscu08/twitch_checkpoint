@@ -89,7 +89,7 @@ A `channel.chat.message` event is queued only if all of these hold:
 - At most `QUEUE_MAX` (30) messages in total; when the queue is full, new messages are dropped. Both caps include unanswered messages in the active checkpoint, including the open card.
 - Dropped messages are logged without their text; noise uses `reason=noise` at DEBUG.
 
-**Order:** questions first, then the rest, each group oldest first. A message is a question if it ends with `?` or starts with a question word (`what, why, how, when, where, who, which, is, are, do, does, can, will, should`).
+**Order:** questions first, then the rest, each group oldest first. A message is a question if it ends with `?` or starts with a question word (`what, why, how, when, where, who, which, is, are, do, does, can, will, should`) after skipping consecutive leading greeting/reaction words and @mentions. This classification affects ordering and earlier-answer matching only; it does not exempt noise from filtering.
 
 **Stored per message:** `message_id`, `user_login`, `user_name`, `color` (empty → a fallback palette colour chosen by login), `text`, `kind` (question or other), and `received_at`, which comes from an explicit clock passed in.
 
@@ -138,7 +138,7 @@ Only a quote reply whose `CANCEL_WINDOW_S` has passed becomes an **answered pair
 
 **Matching** (pure):
 - When a question is queued, compare it with the answered questions.
-- Both texts are reduced to lowercased content words: stopwords and punctuation are removed and a simple plural `s` is stripped.
+- Both texts first skip leading greeting/reaction words and @mentions, then are reduced to lowercased content words: stopwords and punctuation are removed and a simple plural `s` is stripped. Matcher stopwords and echo content-word rules stay unchanged.
 - It is a match if they share at least `min(2, |A|, |B|)` content words and the Jaccard overlap is at least `MATCH_MIN_JACCARD` (0.5).
 - The best match wins; ties go to the most recent.
 - Example that must match: "what editor is that?" and "which editor do you use?".
@@ -251,6 +251,8 @@ Each WP is done when its acceptance criteria pass and `uv run pytest` and `uv ru
 
 WP1 filter acceptance also includes the deliberately narrow noise keep/drop table,
 with emote/mention fragments excluded and any unlisted content word preserved.
+Question-order and earlier-match tests include greeting/mention prefixes and the
+pair "Hi, what editor are you using" / "what editor is that?".
 
 WP2 includes the minimal pure plumbing config and local server needed for `/mic`
 and validated `/stt/hypothesis`, `/stt/status` and `/stt/abort` intake. Intake is
