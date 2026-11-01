@@ -213,6 +213,7 @@ def test_next_card_waits_for_stamp_and_snapshot_reconnect_restores_without_exit(
     page.clock.run_for(700)
     expect(page.locator("#partial-text")).to_have_text("Second answer")
     page.evaluate("window.__sockets.at(-1).close()")
+    assert "Second answer" not in page.locator("body").text_content()
     page.clock.run_for(600)
     assert page.evaluate("window.__sockets.length") == 2
     data = snapshot()

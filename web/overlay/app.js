@@ -297,7 +297,12 @@ function connect() {
       try { receive(JSON.parse(message.data)); } catch { /* Ignore malformed input. */ }
     };
     socket.onerror = () => socket.close();
-    socket.onclose = () => { setTimeout(open, delay); delay = Math.min(delay * 2, 8000); };
+    socket.onclose = () => {
+      // While disconnected we cannot receive moderation; await a fresh snapshot.
+      model.card = null;
+      clearVisible(); renderBadge();
+      setTimeout(open, delay); delay = Math.min(delay * 2, 8000);
+    };
   };
   open();
 }
