@@ -281,6 +281,7 @@ Summary (5 s): ┌ CHECKPOINT SAVED ✓  4 answered · 1 from earlier · 1 skipp
 
 - **Words:** they fade in one by one with a caret, and only the last 3 lines are visible.
 - **Name chip:** in the viewer's colour.
+- **Glyphs:** the dock and earlier toast use the shared diamond for display prefixes unsupported by the system font. Twitch reply payloads keep the specified microphone and pin prefixes unchanged.
 - **Sound:** one soft synthesized chime on CHECKPOINT and one on ✓. No idle animation.
 
 **Dock (400 px)**
