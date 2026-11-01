@@ -356,6 +356,22 @@ def test_demo_entrypoint_bypasses_twitch_even_with_dotenv_credentials(
         assert response.status_code == 200 and response.json()["queued"]
 
 
+@pytest.mark.parametrize("argv,enabled", [([], True), (["--demo"], False)])
+def test_demo_flag_is_explicit_and_normal_mode_keeps_twitch(monkeypatch, argv, enabled):
+    from checkpoint.server import __main__ as entrypoint
+
+    monkeypatch.setattr(entrypoint, "load_dotenv", lambda *_: None)
+    monkeypatch.setenv("TWITCH_CLIENT_ID", "placeholder")
+    monkeypatch.setenv("CHECKPOINT_DEBUG", "0")
+    calls, options = [], []
+    monkeypatch.setattr(entrypoint, "factory", lambda *args: calls.append(args))
+    monkeypatch.setattr(entrypoint, "create_app", lambda **kw: options.append(kw))
+    monkeypatch.setattr(entrypoint.uvicorn, "run", lambda *_, **kw: None)
+    entrypoint.main(argv)
+    assert bool(calls) is enabled
+    assert options[0]["debug"] is (not enabled)
+
+
 @pytest.mark.parametrize("action", ["checkpoint", "next", "skip", "clear"])
 def test_bodyless_actions_reject_malformed_or_unexpected_input(action):
     with TestClient(create_app()) as client:
