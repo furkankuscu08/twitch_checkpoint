@@ -36,4 +36,4 @@ class MicProcessor extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor('minefield-mic', MicProcessor);
+registerProcessor('checkpoint-mic', MicProcessor);

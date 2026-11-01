@@ -60,6 +60,8 @@ def test_mic_route_injects_engine_port_and_serves_worklet():
         page = client.get("/mic")
         assert page.status_code == 200
         assert 'data-engine-port="9876"' in page.text
+        assert "Checkpoint microphone" in page.text
+        assert "__ENGINE_AUDIO_PORT__" not in page.text
         assert "__STT_" not in page.text
         assert client.get("/mic/worklet.js").status_code == 200
         assert client.get("/mic/resampler.js").status_code == 200
@@ -111,3 +113,11 @@ def test_worklet_bounds_unacknowledged_frames_and_marks_dropped_audio():
         timeout=10,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_checkpoint_names_are_shared_by_worklet_and_page():
+    app = (ROOT / "web/mic/app.js").read_text()
+    worklet = (ROOT / "web/mic/worklet.js").read_text()
+    assert "'checkpoint-mic'" in app and "'checkpoint-mic'" in worklet
+    assert "'checkpoint-mic-device'" in app
+    assert "minefield" not in (app + worklet).lower()

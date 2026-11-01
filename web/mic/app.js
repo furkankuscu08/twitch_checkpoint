@@ -15,7 +15,7 @@ function status(text) {
   connection.classList.toggle('connected', text === 'Connected');
 }
 function rememberedDevice() {
-  try { return localStorage.getItem('minefield-mic-device') || ''; } catch { return ''; }
+  try { return localStorage.getItem('checkpoint-mic-device') || ''; } catch { return ''; }
 }
 async function devices() {
   const selected = device.value || rememberedDevice();
@@ -78,7 +78,7 @@ async function start() {
     }});
     context = new AudioContext();
     await context.audioWorklet.addModule('/mic/worklet.js');
-    worklet = new AudioWorkletNode(context, 'minefield-mic', {channelCount: 1, channelCountMode: 'explicit',
+    worklet = new AudioWorkletNode(context, 'checkpoint-mic', {channelCount: 1, channelCountMode: 'explicit',
       processorOptions: {maxPendingFrames: Number(settings.audioQueue) * 4}});
     context.createMediaStreamSource(stream).connect(worklet);
     worklet.connect(context.destination); // Unwritten outputs are silent; keeps processing active.
@@ -116,7 +116,7 @@ async function start() {
 }
 toggle.addEventListener('click', () => running ? stop() : start());
 device.addEventListener('change', async () => {
-  try { localStorage.setItem('minefield-mic-device', device.value); } catch { /* Storage is optional. */ }
+  try { localStorage.setItem('checkpoint-mic-device', device.value); } catch { /* Storage is optional. */ }
   if (running) { await stop(); await start(); }
 });
 navigator.mediaDevices?.addEventListener('devicechange', () => { devices().catch(() => {}); });

@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="en" data-engine-port="__STT_MIC_PORT__" data-audio-queue="__STT_AUDIO_QUEUE__" data-retry-min="__STT_RECONNECT_MIN__" data-retry-max="__STT_RECONNECT_MAX__">
+<html lang="en" data-engine-port="__ENGINE_AUDIO_PORT__" data-audio-queue="__STT_AUDIO_QUEUE__" data-retry-min="__STT_RECONNECT_MIN__" data-retry-max="__STT_RECONNECT_MAX__">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Minefield microphone</title>
+  <title>Checkpoint microphone</title>
   <link rel="stylesheet" href="/mic/style.css">
   <script src="/mic/app.js" type="module"></script>
 </head>
 <body>
   <main>
-    <header><p class="eyebrow">STREAM AUDIO</p><h1>Minefield<span class="mark">✳</span></h1>
-      <p class="intro">Keep this tab open while you play.</p></header>
+    <header><p class="eyebrow">STREAM AUDIO</p><h1>Checkpoint<span class="mark">◆</span></h1>
+      <p class="intro">Keep this tab open while you stream.</p></header>
     <section class="panel" aria-label="Microphone controls">
       <div class="heading"><h2>Your microphone</h2><span id="connection" role="status">Stopped</span></div>
       <label for="device">Audio input</label>
@@ -20,7 +20,7 @@
       <button id="toggle">Start microphone</button>
       <p id="error" role="alert"></p>
     </section>
-    <p class="note">Choose your stream microphone and allow access in Chrome.<br>Check connection health in the <a href="/dock" target="_blank" rel="noopener">control dock</a>.</p>
+    <p class="note">Choose your stream microphone and allow access in Chrome.<br>Start the microphone to send audio to Checkpoint.</p>
   </main>
 </body>
 </html>
