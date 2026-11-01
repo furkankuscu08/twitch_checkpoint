@@ -1,9 +1,6 @@
-"""The unported Minefield helper is retained as WP6 reference material."""
+"""Shared pure-core fixtures; provider calls are faked by default."""
 
 import pytest
-
-collect_ignore = ["test_blind_plant.py"]
-
 
 @pytest.fixture
 def chat_event():

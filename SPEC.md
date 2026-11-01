@@ -273,8 +273,9 @@ on both pages, plus demo screenshots with zero-earlier and all-zero summaries.
 WP2 includes the minimal pure plumbing config and local server needed for `/mic`
 and validated `/stt/hypothesis`, `/stt/status` and `/stt/abort` intake. Intake is
 logged at DEBUG without retaining transcripts; WP1 and WP3 extend this base.
-The copied blind-plant helper and its tests are deferred to WP6; screenshot
-tooling is deferred to WP4.
+WP6 replaces the copied blind-plant helper with `scripts/chat_script.py` and its
+fake-only tests; the original remains in the as-is history. WP4 supplies the
+screenshot tooling.
 
 **Order:** WP2 → WP1 → WP3 in the main thread, with WP4, WP5 and the WP6 chat script in isolated subagent worktrees after the shared contract is frozen → remaining WP6 → WP7.
 

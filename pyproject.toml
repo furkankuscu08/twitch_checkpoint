@@ -36,7 +36,3 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 
-# Unported WP6 references retain their original imports until that work package.
-[tool.ruff.lint.per-file-ignores]
-"scripts/blind_plant.py" = ["I001"]
-"tests/test_blind_plant.py" = ["I001"]
