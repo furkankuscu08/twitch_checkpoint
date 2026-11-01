@@ -259,11 +259,15 @@ class Engine:
                 await self._session()
                 delay = self.config.STT_RECONNECT_MIN_S
             except websockets.InvalidStatus as exc:
+                # Verified 2026-11-01: 401/403 are rejected handshakes. Keep the
+                # engine heartbeat and card server alive with bounded backoff.
+                # https://developers.deepgram.com/docs/errors
                 if exc.response.status_code in {401, 403}:
-                    raise ValueError(
-                        "Deepgram rejected authentication or access"
-                    ) from None
-                LOG.warning("Deepgram connection rejected")
+                    LOG.warning(
+                        "Deepgram authentication or access rejected; reconnecting"
+                    )
+                else:
+                    LOG.warning("Deepgram connection rejected")
             except (
                 OSError,
                 TimeoutError,

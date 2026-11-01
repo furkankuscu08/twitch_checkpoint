@@ -220,6 +220,9 @@ WebSocket `/ws/overlay` and `/ws/dock`, JSON with `type`:
 
 - **Engine:** taken from Minefield. Plain `websockets`, `flux-general-en`, EU region, `mip_opt_out=true`, default end-of-turn settings (`eot_threshold` 0.7, `eot_timeout_ms` 5000; verified 1 Nov), reconnect with backoff, heartbeat, `--save-hyps`. The engine sends no StartOfTurn: a new turn shows up as a hypothesis with a new `utt_id`.
 - **No biasing:** chat text and queued questions are never sent to Deepgram, as `keyterm` or prompts. Checkpoint quotes what was said, not what was expected.
+- **Provider failures:** rejected handshakes, including 401/403, keep the engine
+  heartbeat alive with Deepgram disconnected and bounded reconnect backoff. They
+  never terminate the card server or discard its queue and pending replies.
 - **Mic stop/replacement:** when the provider connection is healthy, request `ForceEndTurn` and wait up to `STT_HTTP_TIMEOUT_S` for its actual final hypothesis before closing. `CloseStream` alone does not finalize a turn. Failed drains, broken provider connections and lost PCM continuity abort the partial turn; never synthesize a final from an Update. Verified 1 Nov 2026: https://developers.deepgram.com/docs/flux/force-end-turn and https://developers.deepgram.com/docs/flux/close-stream.
 - **Answer assembly** (pure, in `core`): word-time attribution, echo detection, final and partial text. Word confidence is never used to edit text.
 
