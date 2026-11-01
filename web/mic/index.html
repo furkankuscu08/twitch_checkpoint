@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-engine-port="__STT_MIC_PORT__" data-audio-queue="__STT_AUDIO_QUEUE__" data-retry-min="__STT_RECONNECT_MIN__" data-retry-max="__STT_RECONNECT_MAX__">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Minefield microphone</title>
+  <link rel="stylesheet" href="/mic/style.css">
+  <script src="/mic/app.js" type="module"></script>
+</head>
+<body>
+  <main>
+    <header><p class="eyebrow">STREAM AUDIO</p><h1>Minefield<span class="mark">✳</span></h1>
+      <p class="intro">Keep this tab open while you play.</p></header>
+    <section class="panel" aria-label="Microphone controls">
+      <div class="heading"><h2>Your microphone</h2><span id="connection" role="status">Stopped</span></div>
+      <label for="device">Audio input</label>
+      <select id="device"><option value="">Default microphone</option></select>
+      <div class="meter-label"><span>Input level</span><span id="level-label">Quiet</span></div>
+      <div id="meter" role="meter" aria-label="Microphone level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="level"></span></div>
+      <button id="toggle">Start microphone</button>
+      <p id="error" role="alert"></p>
+    </section>
+    <p class="note">Choose your stream microphone and allow access in Chrome.<br>Check connection health in the <a href="/dock" target="_blank" rel="noopener">control dock</a>.</p>
+  </main>
+</body>
+</html>
