@@ -138,6 +138,13 @@ function showCard(animate = true) {
   stamp.setAttribute('aria-label', 'Answered on stream');
   node.append(head, question, area, stamp);
   $('card-host').append(node);
+  if (animate) {
+    const flight = element('span', 'crystal-flight', '◆');
+    flight.style.color = card.color;
+    flight.setAttribute('aria-hidden', 'true');
+    $('card-host').append(flight);
+    setTimeout(() => flight.remove(), 520);
+  }
   visibleCard = { id: card.id, node, exiting: false };
   updateAnswer(); renderBadge();
 }
@@ -304,9 +311,22 @@ if (demo) {
   const play = () => {
     frozenNow = fixedStep ? Date.now() / 1000 : null;
     const frame = frames[index];
-    for (const event of frame.events) receive(event, { freezeExit: fixedStep });
+    const elapsed = Date.now() / 1000 - frames[0].events[0].stats.server_now;
+    for (const original of frame.events) {
+      const event = structuredClone(original);
+      if (event.type === 'snapshot') {
+        event.stats.server_now += elapsed;
+        if (event.card?.grace_until != null) event.card.grace_until += elapsed;
+      }
+      receive(event, { freezeExit: fixedStep });
+    }
     if (frame.phase === 'pill') finishExit(fixedStep);
-    if (!fixedStep) setTimeout(() => { index = (index + 1) % frames.length; play(); }, frame.hold ?? 2300);
+    if (!fixedStep) setTimeout(() => {
+      index = (index + 1) % frames.length;
+      // The live exit already includes the pill; its still frame is not a second close.
+      if (frames[index].phase === 'pill') index = (index + 1) % frames.length;
+      play();
+    }, frame.hold ?? 2300);
   };
   play();
 } else {

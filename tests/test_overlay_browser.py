@@ -239,3 +239,85 @@ def test_demo_geometry_theme_and_network_independence(overlay):
         == "rgba(0, 0, 0, 0)"
     )
     assert page.evaluate("document.documentElement.scrollWidth") == 1920
+
+
+def test_frozen_demo_keeps_finished_words_bright_for_screenshots(overlay):
+    page, base = overlay
+    page.goto(f"{base}/overlay/?demo=1&step=5")
+    page.wait_for_function("window.checkpointReady === true")
+    assert (
+        page.locator("#final-text .word").first.evaluate(
+            "node => getComputedStyle(node).opacity"
+        )
+        == "1"
+    )
+    assert (
+        float(
+            page.locator("#partial-text").evaluate(
+                "node => getComputedStyle(node).opacity"
+            )
+        )
+        < 0.7
+    )
+
+
+def test_snapshot_whitelists_queue_and_pending_and_last_three_answer_lines(overlay):
+    from playwright.sync_api import expect
+
+    page, _ = overlay
+    data = snapshot()
+    data["queue"] = [
+        dict(
+            id="waiting",
+            user_name="Safe viewer",
+            color="#69e3ca",
+            kind="question",
+            text="NEVER ON STREAM",
+            earlier=dict(quote="PRIVATE EARLIER QUOTE", ago_min=12),
+        )
+    ]
+    data["pending"] = [dict(id="reply", text="PRIVATE PENDING REPLY")]
+    data["card"] = {
+        **card(),
+        **answer(final_text="First words " + "word " * 100 + "last words"),
+    }
+    emit(page, data)
+    expect(page.locator("#final-text")).to_contain_text("last words")
+    body = page.locator("body").text_content()
+    for secret in ("NEVER ON STREAM", "PRIVATE EARLIER QUOTE", "PRIVATE PENDING REPLY"):
+        assert secret not in body
+    clip = page.locator(".answer-clip")
+    assert clip.evaluate("node => node.scrollHeight > node.clientHeight")
+    assert clip.evaluate(
+        "node => node.scrollTop + node.clientHeight >= node.scrollHeight - 1"
+    )
+    assert clip.bounding_box()["height"] <= 117
+    emit(page, snapshot())
+    assert "First words" not in page.locator("body").text_content()
+
+
+def test_timed_demo_refreshes_grace_time_for_each_frame(overlay):
+    from playwright.sync_api import expect
+
+    page, base = overlay
+    page.goto(f"{base}/overlay/?demo=1")
+    page.wait_for_function("window.checkpointReady === true")
+    # Steps 0 through 5 hold for 11.2 seconds before the final-answer frame.
+    page.clock.run_for(11250)
+    expect(page.locator("#grace")).to_be_visible()
+    assert float(page.locator("#grace").get_attribute("data-remaining")) > 2
+    assert page.evaluate("window.__sockets.length") == 0
+
+
+def test_all_demo_steps_render_without_errors_or_provider_connections(overlay):
+    page, base = overlay
+    errors = []
+    page.on("pageerror", lambda error: errors.append(error))
+    requests = []
+    page.on("request", lambda request: requests.append(request))
+    for step in range(19):
+        page.goto(f"{base}/overlay/?demo=1&step={step}")
+        page.wait_for_function("window.checkpointReady === true")
+        assert page.evaluate("window.__sockets.length") == 0
+    assert not errors
+    assert not [request for request in requests if request.method == "POST"]

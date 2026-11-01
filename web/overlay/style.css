@@ -53,3 +53,8 @@ html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background:
 @keyframes card-shrink { 0%, 48% { opacity: 1; transform: none; } 100% { opacity: .85; transform: scale(.3,.2); } }
 @keyframes pill-out { to { transform: translateX(450px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .card.opening, .word.new, .crystal.new { animation: none; } }
+/* Still frames show the settled word contrast, not a half-finished fade. */
+.demo-frozen .word.new, .demo-frozen .card.opening, .demo-frozen .crystal.new { animation: none; }
+.viewer { padding: 6px 10px; border: 1px solid color-mix(in srgb, currentColor, transparent 70%); border-radius: 999px; background: color-mix(in srgb, currentColor, transparent 94%); }
+.crystal-flight { position: absolute; top: -54px; right: 26px; font-size: 18px; animation: crystal-flight 520ms ease-out both; }
+@keyframes crystal-flight { from { opacity: 1; transform: none; } to { opacity: 0; transform: translate(-70px, 110px) scale(.6); } }

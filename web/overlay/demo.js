@@ -18,7 +18,7 @@ export function demoFrames() {
     stats: { server_now: now, answer_grace_s: 2.5, cancel_window_s: 5, summary_s: 5, summary: null, summary_until: null },
     ...changes,
   });
-  const open = (index = 0, changes = {}) => snapshot({ card: { ...card(index), ...answer(index, changes) } });
+  const open = (index = 0, changes = {}) => snapshot({ queue: rows.slice(index), card: { ...card(index), ...answer(index, changes) } });
   const text = "It's VS Code with my own dark theme, and the font is a system monospace.";
   return [
     { label: 'Idle', events: [snapshot({ focus: false, queue: [] })], hold: 1000 },
