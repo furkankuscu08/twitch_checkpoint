@@ -49,3 +49,41 @@ def test_invalid_config_is_rejected(changes):
 def test_invalid_env_port_is_rejected(value):
     with pytest.raises(ValueError):
         config_from_env({"APP_PORT": value})
+
+
+def test_wp1_defaults_and_valid_zero_slack():
+    config = Config()
+    expected = dict(
+        PER_USER_PENDING=2,
+        QUEUE_MAX=30,
+        ATTRIB_SLACK_S=0.3,
+        ECHO_MIN_SHARE=0.6,
+        ANSWER_GRACE_S=2.5,
+        CANCEL_WINDOW_S=5,
+        MIN_QUOTE_WORDS=2,
+        QUOTE_MAX_CHARS=300,
+        CHAT_MAX_CHARS=500,
+        ANSWERED_MAX=50,
+        MATCH_MIN_JACCARD=0.5,
+        SUMMARY_S=5,
+        WS_CLIENT_QUEUE_SIZE=100,
+    )
+    assert all(getattr(config, key) == value for key, value in expected.items())
+    assert replace(config, ATTRIB_SLACK_S=0).ATTRIB_SLACK_S == 0
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        dict(ECHO_MIN_SHARE=1.1),
+        dict(MATCH_MIN_JACCARD=-0.1),
+        dict(QUEUE_MAX=0),
+        dict(PER_USER_PENDING=True),
+        dict(ANSWERED_MAX=0),
+        dict(ATTRIB_SLACK_S=-0.1),
+        dict(CANCEL_WINDOW_S=0),
+    ],
+)
+def test_wp1_config_rejects_invalid_values(changes):
+    with pytest.raises(ValueError):
+        replace(Config(), **changes)

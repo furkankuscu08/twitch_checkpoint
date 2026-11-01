@@ -64,7 +64,7 @@ data/         gitignored
 ## 3. Behaviour
 
 ### Focus and checkpoint
-- **Focus on/off** (dock) starts and stops collecting messages. Focus also shows the badge on the overlay. Turning focus off keeps the queue; **Clear** empties it.
+- **Focus on/off** (dock) starts and stops collecting messages. Focus also shows the badge on the overlay. Turning focus off keeps the queue. **Clear** removes waiting and captured messages and closes the open card silently, without creating a reply; already pending replies remain unchanged.
 - **Checkpoint** (dock) works whenever the queue is not empty, whether focus is on or off. It takes the current queue as this checkpoint's list. Messages arriving during a checkpoint wait for the next one.
 
 ### Collecting
@@ -79,7 +79,7 @@ A `channel.chat.message` event is queued only if all of these hold:
 
 **Caps:**
 - At most `PER_USER_PENDING` (2) pending messages per viewer; a third one is dropped.
-- At most `QUEUE_MAX` (30) messages in total; when the queue is full, new messages are dropped.
+- At most `QUEUE_MAX` (30) messages in total; when the queue is full, new messages are dropped. Both caps include unanswered messages in the active checkpoint, including the open card.
 - Dropped messages are logged without their text.
 
 **Order:** questions first, then the rest, each group oldest first. A message is a question if it ends with `?` or starts with a question word (`what, why, how, when, where, who, which, is, are, do, does, can, will, should`).
@@ -93,12 +93,12 @@ At a checkpoint the server opens the first message as a **card**. The card shows
 
 **Answer attribution, by word time:**
 - A word belongs to the open card if its spoken time (`utt_start_wall + word.start`) is at least `card_opened_at − ATTRIB_SLACK_S` (0.3 s).
-- **Next** pressed mid-turn closes the card at that moment. Later words go to the next card.
+- **Next** pressed mid-turn closes the card at that moment, using the live partial currently shown. Words starting before that boundary remain on the old card; words starting at or after it go to the next card. Attribution slack never assigns the same words to both cards. A closed card's reply is not revised by later hypotheses.
 
 So a sentence that runs from "okay, checkpoint" straight into the answer is not lost, and the engine and server share one machine clock.
 
 **Question echo:**
-- Streamers often read the question aloud first. If the first finished turn on a card contains at least 60% of the question's content words, and the question has at least 3 content words, that turn is an **echo**.
+- Streamers often read the question aloud first. The first finished turn on a card is an **echo** only if the question has at least 3 distinct content words, at least `ECHO_MIN_SHARE` (0.6) of the question's content words appear in the turn, and at least `ECHO_MIN_SHARE` of the turn's own content words appear in the question. Both shares use normalized distinct content words. A question followed by a substantive answer in the same turn fails the mostly-question condition and is quoted in full as heard; do not strip its question prefix.
 - An echo is shown greyed on the card. It is not quoted, and it does not count as an answer for the grace rule.
 
 **Live answer:** finished turns (minus the echo) plus the latest partial words of the open turn. The overlay shows partial words dimmed.
@@ -127,7 +127,7 @@ When a card closes with ✓, its reply is pending for `CANCEL_WINDOW_S` (5 s). T
   - failures are logged without the message text and never block the flow.
 
 ### Answered earlier
-Every ✓ card with a quote is kept as an **answered pair**: question text, quote, time. At most `ANSWERED_MAX` (50) pairs are kept, and only in memory.
+Only a quote reply whose `CANCEL_WINDOW_S` has passed becomes an **answered pair**: question text, the exact quote, and the card-closing time. Before that deadline it is unavailable for earlier-answer matching. Plain receipts never become answered pairs, including short, blocklisted and cancelled answers. At most `ANSWERED_MAX` (50) pairs are kept, and only in memory.
 
 **Matching** (pure):
 - When a question is queued, compare it with the answered questions.
@@ -146,7 +146,7 @@ Every ✓ card with a quote is kept as an **answered pair**: question text, quot
 `checkpoint/core/blocklist.txt` is a short list of slurs and profanity, matched on normalized whole words. It is used twice: on incoming messages (a match is never queued, so it never reaches the stream) and on answers (a match sends a plain receipt).
 
 ### Summary
-When the last card of a checkpoint closes, the overlay shows **CHECKPOINT SAVED ✓** with "N answered · N from earlier · N skipped" for `SUMMARY_S` (5 s).
+When the last card of a checkpoint closes, the overlay shows **CHECKPOINT SAVED ✓** with "N answered · N from earlier · N skipped" for `SUMMARY_S` (5 s). Answered and skipped count cards in this checkpoint; moderation removals are not skips, and replacing a quote with a receipt does not undo an answered card. From earlier counts successful earlier-answer sends since the previous checkpoint summary, including sends while collecting before Checkpoint was pressed. Reset that counter whenever a summary is emitted. Clear ends an active checkpoint with its current counts and a summary, without answering any remaining card.
 
 ---
 
