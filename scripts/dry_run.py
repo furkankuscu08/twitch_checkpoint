@@ -216,7 +216,13 @@ class Replay:
         return response.json()
 
     def button(self, name):
-        self.dock.get_by_role("button", name=name, exact=True).click()
+        route = name.lower().split()[0]
+        with self.dock.expect_response(
+            lambda response: response.url.endswith("/dock/" + route)
+        ) as response:
+            self.dock.get_by_role("button", name=name, exact=True).click()
+        if not response.value.ok:
+            raise AssertionError(f"Dock action {route} failed")
 
     def shot(self, beat):
         for name in ("overlay", "dock"):
@@ -261,6 +267,10 @@ class Replay:
                 == self.scenario.part1[index].text
             )
         )
+        self.overlay.wait_for_function("""() => {
+          const card = document.querySelector('.card');
+          return card && getComputedStyle(card).opacity === '1';
+        }""")
         self.check(
             f"card {index + 1} order and text",
             (
@@ -283,6 +293,10 @@ class Replay:
             (self.event("card_close", id=uid) is None),
         )
         self.wait(lambda: self.event("card_close", id=uid) is not None, timeout=2)
+        self.overlay.wait_for_function("""() => {
+          const stamp = document.getElementById('stamp');
+          return stamp && !stamp.hidden && getComputedStyle(stamp).opacity === '1';
+        }""")
         self.shot(f"card-{index + 1}-stamp")
         pending = self.event("reply_pending", after=0)
         self.check(

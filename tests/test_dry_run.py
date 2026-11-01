@@ -104,3 +104,49 @@ def test_owned_server_stops_and_releases_port(tmp_path, outcome):
     with socket.socket() as listener:
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(("127.0.0.1", port))
+
+
+@pytest.mark.browser
+def test_replay_stamp_capture_waits_for_the_visible_checkmark(tmp_path):
+    from playwright.sync_api import sync_playwright
+
+    from scripts.dry_run import Replay, load_scenario, owned_server
+
+    scenario_files(tmp_path)
+    scenario = load_scenario(tmp_path)
+    with owned_server(tmp_path) as server, sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        replay = Replay(browser, server, scenario, tmp_path)
+        original_shot = replay.shot
+
+        def inspect_stamp(beat):
+            if beat.endswith("-stamp"):
+                assert (
+                    replay.overlay.locator("#stamp").evaluate(
+                        "node => getComputedStyle(node).opacity"
+                    )
+                    == "1"
+                ), "Stamp screenshot was taken before the checkmark landed"
+            original_shot(beat)
+
+        replay.shot = inspect_stamp
+        try:
+            replay.button("Focus")
+            entry = scenario.part1[0]
+            result = replay.post(
+                "/dock/debug/chat",
+                {
+                    "user": scenario.users[entry.account],
+                    "text": entry.text,
+                },
+            )
+            replay.ids.append(result["id"])
+            replay.wait(lambda: replay.event("queued", id=result["id"]) is not None)
+            replay.button("Checkpoint")
+            replay.open_card(0)
+            replay.speak(scenario.answers[0], "first-answer")
+            replay.auto_close(0)
+            assert all(check["passed"] for check in replay.checks)
+        finally:
+            replay.close()
+            browser.close()
