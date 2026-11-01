@@ -26,6 +26,10 @@ class Config:
     MATCH_MIN_JACCARD: float = 0.5
     SUMMARY_S: float = 5
     WS_CLIENT_QUEUE_SIZE: int = 100
+    SERVER_TICK_S: float = 0.05
+    WS_SEND_TIMEOUT_S: float = 5
+    STT_UTTERANCE_HISTORY_SIZE: int = 1000
+    TWITCH_VALIDATE_S: float = 3600
     ENGINE_TIMEOUT_S: float = 5
     CHAT_SEND_TIMEOUT_S: float = 5
     STT_AUDIO_QUEUE_SIZE: int = 4
