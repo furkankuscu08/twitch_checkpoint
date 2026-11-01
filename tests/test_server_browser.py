@@ -106,13 +106,22 @@ def test_dock_and_overlay_share_server_state_without_real_twitch(speech):
                 step(1008.5)
                 assert [i.reply.kind for i in sent] == ["plain", "quote"]
                 assert all(i.debug for i in sent)
+                step(1184.0)
                 assert http.post(
                     "/dock/debug/chat",
                     json={"user": "repeater", "text": "Which editor do you use?"},
                 ).is_success
-                dock.get_by_role("button", name="Send answer from 0 min ago").click()
+                dock.get_by_role("button", name="Send answer from 3 min ago").click()
                 expect(dock.locator("#notice")).to_contain_text("received your answer")
                 assert len(sent) == 3 and sent[-1].earlier
+                assert sent[-1].reply.reply_parent_message_id == "debug-4"
+                assert sent[-1].reply.text == (
+                    "📌 answered earlier on stream (3 min ago): "
+                    '"I use my favourite editor."'
+                )
+                expect(overlay.locator("#earlier-toast")).to_contain_text(
+                    "your answer from 3 min ago"
+                )
                 assert http.post(
                     "/dock/debug/chat",
                     json={"user": "lastviewer", "text": "One more checkpoint?"},

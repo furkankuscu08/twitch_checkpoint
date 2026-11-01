@@ -109,6 +109,38 @@ uv run python scripts/shoot.py dock
 
 Default tests use fakes and skip browser/live checks. Screenshot PNGs are saved under `data/shots/`; screenshot demos need no API keys. Use `scripts/shoot.py PAGE --live` to capture the running dock or overlay, or `scripts/shoot.py mic` for the mic page.
 
+For a fully local recording rehearsal, the four-card runner starts its own
+`--demo` server, injects timed chat and synthetic speech hypotheses, and drives
+the dock controls. It uses real delays, including the three-minute earlier-answer
+wait, and stops its server on exit:
+
+```bash
+uv run python scripts/dry_run.py --scenario docs/private/demo
+```
+
+The scenario directory is private and gitignored. Supply `part1.json` (four
+timed messages), `part2.json` (one repeated question), and `replay.json`:
+
+```json
+{
+  "users": {"test2": "river", "test3": "sage"},
+  "answers": ["First answer.", "Second answer.", null, "Last answer."]
+}
+```
+
+Answers correspond to the four cards: direct answer, question echo then answer,
+Skip, and Next followed by Cancel quote. Chat entries use the same format as
+`chat_script.py`, restricted to `test2`/`test3`. Output goes to
+`data/shots/dry-run/`: per-beat overlay/dock screenshots, events, server log and
+a pass/fail report. This checks application behavior with synthetic turns;
+real-mic turn splitting still needs rehearsal. Demo sends remain suppressed,
+so their success toast is covered separately with a fake sender in browser tests.
+
+The [Devpost gallery](docs/gallery/README.md) contains three original 1920×1280
+images and their local Playwright renderer.
+
+![Checkpoint architecture](docs/gallery/architecture.png)
+
 ```bash
 uv run pytest -m live
 ```

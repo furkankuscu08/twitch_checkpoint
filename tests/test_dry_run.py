@@ -2,7 +2,6 @@
 
 import json
 import os
-import signal
 import socket
 import sys
 
@@ -87,7 +86,10 @@ def test_owned_server_stops_and_releases_port(tmp_path, outcome):
         with owned_server(tmp_path, port=port) as server:
             pid = server.process.pid
             assert server.process.args[:4] == [
-                sys.executable, "-m", "checkpoint.server", "--demo"
+                sys.executable,
+                "-m",
+                "checkpoint.server",
+                "--demo",
             ]
             assert server.process.poll() is None
             if outcome == "failure":
@@ -102,4 +104,3 @@ def test_owned_server_stops_and_releases_port(tmp_path, outcome):
     with socket.socket() as listener:
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(("127.0.0.1", port))
-    assert signal.SIGTERM  # Cleanup never signals another port's owner.
