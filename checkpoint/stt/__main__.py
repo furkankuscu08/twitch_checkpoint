@@ -11,8 +11,8 @@ import httpx
 import websockets
 from dotenv import load_dotenv
 
-from minefield.server.__main__ import config_from_env
-from minefield.server.app import ROOT
+from checkpoint.server.__main__ import config_from_env
+from checkpoint.server.app import ROOT
 
 from .engine import Engine
 
@@ -32,14 +32,11 @@ def main(argv=None):
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--mic", action="store_true")
     source.add_argument("--wav", type=Path)
-    parser.add_argument("--backend", choices=("flux", "nova3"))
     parser.add_argument("--save-raw", type=Path)
     parser.add_argument("--save-hyps", type=Path)
     args = parser.parse_args(argv)
     load_dotenv(ROOT / ".env")
     environ = dict(os.environ)
-    if args.backend:
-        environ["STT_BACKEND"] = args.backend
     try:
         config = config_from_env(environ)
         key = environ.get("DEEPGRAM_API_KEY")
@@ -59,7 +56,7 @@ def main(argv=None):
                         async with websockets.serve(
                             engine.mic,
                             "127.0.0.1",
-                            config.STT_MIC_PORT,
+                            config.ENGINE_AUDIO_PORT,
                             max_size=1024,
                             max_queue=config.STT_AUDIO_QUEUE_SIZE,
                         ):

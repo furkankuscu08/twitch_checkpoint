@@ -1,4 +1,4 @@
-"""WP5 offline acceptance, using only messages captured from Windows TTS."""
+"""WP2 offline acceptance, using only messages captured from Windows TTS."""
 
 import asyncio
 import json
@@ -22,12 +22,11 @@ def recording(backend):
     ]
 
 
-@pytest.mark.parametrize("backend", ["flux", "nova3"])
-def test_recorded_tts_maps_three_complete_utterances(backend):
-    mapper = Mapper(backend, "process", 1, 1000)
+def test_recorded_tts_maps_three_complete_utterances():
+    mapper = Mapper("process", 1, 1000)
     hypotheses = [
         hyp
-        for row in recording(backend)
+        for row in recording("flux")
         for hyp in mapper.process(row["message"], row["received_wall"])
     ]
     finals = [hyp for hyp in hypotheses if hyp["final"]]
@@ -48,7 +47,7 @@ def test_recorded_tts_maps_three_complete_utterances(backend):
 
 def test_flux_empty_updates_duplicates_and_unchanged_words():
     rows = recording("flux")
-    mapper = Mapper("flux", "p", 1, 1000)
+    mapper = Mapper("p", 1, 1000)
     empty = next(
         r["message"]
         for r in rows
@@ -81,7 +80,7 @@ def test_abort_does_not_finalize_and_ids_change_across_sessions_and_processes():
         ("one", 2, 2000),
         ("two", 1, 3000),
     ):
-        mapper = Mapper("flux", process, session, anchor)
+        mapper = Mapper(process, session, anchor)
         hyp = mapper.process(update, anchor + 1)[0]
         ids.append(hyp["utt_id"])
         assert mapper.abort() == hyp["utt_id"]
@@ -90,61 +89,14 @@ def test_abort_does_not_finalize_and_ids_change_across_sessions_and_processes():
     assert len(set(ids)) == 3
 
 
-def test_nova_late_utterance_end_does_not_finalize_new_speech():
-    rows = recording("nova3")
-    marker = next(
-        r["message"] for r in rows if r["message"].get("type") == "UtteranceEnd"
-    )
-    mapper = Mapper("nova3", "p", 1, 1000)
-    for row in rows:
-        message = row["message"]
-        out = mapper.process(message, row["received_wall"])
-        if out and any("volcano" in w["text"] for w in out[-1]["words"]):
-            break
-    assert mapper.process(marker, 1008) == []
-    assert mapper.utt_id is not None
-
-
-def test_nova_exact_duplicate_cannot_confirm_but_distinct_same_words_can():
-    from checkpoint.core.deck import Deck
-    from checkpoint.core.game import Game
-    from checkpoint.core.matcher import Matcher
-
-    message = next(
-        row["message"]
-        for row in recording("nova3")
-        if row["message"].get("type") == "Results"
-    )
-    game = Game(
-        Deck([{"word": "pineapple", "variants": []}]),
-        replace(Config(), ARM_DELAY_S=0),
-    )
-    game.start(999)
-    game.plant("viewer", "pineapple", 999)
-    game.arm(1000)
-    matcher = Matcher(game)
-    mapper = Mapper("nova3", "process", 1, 1000)
-    first = mapper.process(message, 1002)
-    assert [event["type"] for event in matcher.process(first[0], 1002)] == ["spark"]
-
-    duplicate = json.loads(json.dumps(message))
-    assert mapper.process(duplicate, 1002.1) == []
-
-    distinct = dict(message, duration=message["duration"] + 0.1)
-    second = mapper.process(distinct, 1002.2)
-    assert second[0]["words"] == first[0]["words"]
-    assert second[0]["seq"] == first[0]["seq"] + 1
-    assert [event["type"] for event in matcher.process(second[0], 1002.2)] == ["boom"]
-
-
-@pytest.mark.parametrize("backend,version", [("flux", 2), ("nova3", 1)])
-def test_urls_have_required_options_and_no_biasing(backend, version):
+def test_urls_have_required_options_and_no_biasing():
     from urllib.parse import parse_qs, urlsplit
 
-    url = urlsplit(connection_url(replace(Config(), STT_BACKEND=backend)))
+    url = urlsplit(connection_url(Config()))
     assert url.netloc == "api.eu.deepgram.com"
-    assert url.path == f"/v{version}/listen"
+    assert url.path == "/v2/listen"
     query = parse_qs(url.query)
+    assert query["model"] == ["flux-general-en"]
     assert query["mip_opt_out"] == ["true"]
     assert query["sample_rate"] == ["16000"]
     assert query["encoding"] == ["linear16"]
@@ -289,20 +241,16 @@ def test_engine_disconnect_explicitly_aborts_and_reanchors(monkeypatch):
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("backend", ["flux", "nova3"])
-def test_malformed_messages_cannot_become_hypotheses(backend):
+def test_malformed_messages_cannot_become_hypotheses():
     row = next(
         r["message"]
-        for r in recording(backend)
+        for r in recording("flux")
         if r["message"].get("words") or r["message"].get("type") == "Results"
     )
     malformed = json.loads(json.dumps(row))
-    if backend == "flux":
-        malformed["turn_index"] = True
-    else:
-        malformed["is_final"] = "false"
+    malformed["turn_index"] = True
     with pytest.raises(ValueError):
-        Mapper(backend, "p", 1, 1000).process(malformed, 1001)
+        Mapper("p", 1, 1000).process(malformed, 1001)
 
 
 def test_missing_flux_end_of_turn_is_not_confirmation_for_next_turn():
@@ -319,7 +267,7 @@ def test_missing_flux_end_of_turn_is_not_confirmation_for_next_turn():
         and r["message"].get("turn_index") == 1
         and r["message"]["words"]
     )
-    mapper = Mapper("flux", "p", 1, 1000)
+    mapper = Mapper("p", 1, 1000)
     mapper.process(first, 1001)
     with pytest.raises(ValueError):
         mapper.process(following, 1006)
@@ -362,7 +310,7 @@ def test_failed_hypothesis_post_aborts_instead_of_retrying():
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
             engine = Engine("not-a-real-key", Config(), http)
-            engine.mapper = Mapper("flux", "p", 1, 1000)
+            engine.mapper = Mapper("p", 1, 1000)
             with pytest.raises(SourceChanged):
                 await engine._receive(Socket(), engine.audio.generation)
             await engine._abort()
@@ -410,7 +358,7 @@ def test_failed_final_aborts_its_own_id_once_before_session_cleanup(abort_respon
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
             engine = Engine("not-a-real-key", Config(), http)
-            engine.mapper = Mapper("flux", "p", 1, 1000)
+            engine.mapper = Mapper("p", 1, 1000)
             with pytest.raises(SourceChanged):
                 await engine._receive(Socket(), engine.audio.generation)
             assert [path for path, _ in posts] == [
@@ -469,33 +417,6 @@ def test_mic_replacement_and_bad_frames_are_isolated():
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("backend", ["flux", "nova3"])
-def test_recorded_hypotheses_trigger_real_matcher_without_leaking_other_mines(backend):
-    from checkpoint.core.deck import Deck
-    from checkpoint.core.game import Game
-    from checkpoint.core.matcher import Matcher
-
-    words = ("pineapple", "volcano", "banana")
-    game = Game(
-        Deck([{"word": word, "variants": []} for word in words]),
-        replace(Config(), ARM_DELAY_S=0),
-    )
-    game.start(999)
-    for index, word in enumerate(words):
-        game.plant(f"viewer{index}", word, 999)
-    game.arm(1000)
-    matcher = Matcher(game)
-    mapper = Mapper(backend, "p", 1, 1000)
-    events = []
-    for row in recording(backend):
-        for hypothesis in mapper.process(row["message"], row["received_wall"]):
-            events.extend(matcher.process(hypothesis, row["received_wall"]))
-    booms = [event for event in events if event["type"] == "boom"]
-    assert [event["word"] for event in booms] == list(words)
-    assert all(event["source"] == "stt" for event in booms)
-    assert not any(word in json.dumps(game.snapshot(1020, None)) for word in words)
-
-
 def test_audio_gap_invalidates_session_without_buffering_backlog():
     import time
 
@@ -545,35 +466,15 @@ def test_continuous_audio_with_bounded_arrival_jitter_keeps_its_clock():
     assert audio.accepting
 
 
-@pytest.mark.parametrize("backend", ["flux", "nova3"])
-def test_utterance_storage_is_bounded_without_inventing_a_final(backend):
+def test_utterance_storage_is_bounded_without_inventing_a_final():
     config = replace(Config(), STT_MAX_UTTERANCE_WORDS=10)
-    mapper = Mapper(backend, "p", 1, 1000, config=config)
-    if backend == "flux":
-        message = next(
-            r["message"] for r in recording(backend) if r["message"].get("words")
-        )
-        message = json.loads(json.dumps(message))
-        message["words"] *= 11
-        with pytest.raises(ValueError, match="Utterance word limit"):
-            mapper.process(message, 1001)
-    else:
-        message = next(
-            r["message"]
-            for r in recording(backend)
-            if r["message"].get("is_final") and r["message"].get("speech_final")
-        )
-        message = json.loads(json.dumps(message))
-        message["speech_final"] = False
-        assert not mapper.process(message, 1003)[0]["final"]
-        message["start"] += 3
-        for word in message["channel"]["alternatives"][0]["words"]:
-            word["start"] += 3
-            word["end"] += 3
-        with pytest.raises(ValueError, match="Utterance word limit"):
-            mapper.process(message, 1006)
-        assert mapper.utt_id is not None
-        assert len(mapper.committed) <= config.STT_MAX_UTTERANCE_WORDS
+    mapper = Mapper("p", 1, 1000, config=config)
+    message = next(r["message"] for r in recording("flux") if r["message"].get("words"))
+    message = json.loads(json.dumps(message))
+    message["words"] *= 11
+    with pytest.raises(ValueError, match="Utterance word limit"):
+        mapper.process(message, 1001)
+    assert mapper.utt_id is None
 
 
 def test_engine_instances_have_fresh_process_identifiers():
@@ -581,20 +482,3 @@ def test_engine_instances_have_fresh_process_identifiers():
         Engine("fake", Config(), None).engine_id
         != Engine("fake", Config(), None).engine_id
     )
-
-
-def test_nova_boundary_lag_uses_processed_audio_window_not_last_spoken_word():
-    mapper = Mapper("nova3", "p", 1, 1000)
-    latest_window_end = 0
-    checked = False
-    for row in recording("nova3"):
-        message = row["message"]
-        if message.get("type") == "Results":
-            latest_window_end = message["start"] + message["duration"]
-        output = mapper.process(message, row["received_wall"])
-        if message.get("type") == "UtteranceEnd" and output:
-            checked = True
-            assert output[0]["lag_ms"] == pytest.approx(
-                (row["received_wall"] - 1000 - latest_window_end) * 1000
-            )
-    assert checked

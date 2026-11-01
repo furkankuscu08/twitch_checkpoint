@@ -1,6 +1,6 @@
-# WP5 fixtures
+# Flux fixture (WP2)
 
-Captured on 29 October 2026 from a locally synthesized Windows System.Speech
+Reused from the author’s Minefield plumbing. Captured on 29 October 2026 from a locally synthesized Windows System.Speech
 WAV (Microsoft Zira, 16 kHz mono int16). No microphone or user recordings.
 
 Spoken sentences: “I bought a pineapple for breakfast.” “We watched a volcano

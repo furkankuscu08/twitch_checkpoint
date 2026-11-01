@@ -1,4 +1,4 @@
-"""Async audio/session lifecycle. External failures never block the game server."""
+"""Async audio/session lifecycle. External failures never block Checkpoint."""
 
 import asyncio
 import json
@@ -55,7 +55,7 @@ class Engine:
         p95 = ordered[max(0, math.ceil(len(ordered) * 0.95) - 1)] if ordered else 0
         return dict(
             ok=True,
-            backend=self.config.STT_BACKEND,
+            backend="flux",
             deepgram="connected" if self.connected else "disconnected",
             mic="connected" if self.audio.connected else "disconnected",
             lag_ms_p95=max(0, p95),
@@ -66,12 +66,12 @@ class Engine:
         try:
             async with asyncio.timeout(self.config.STT_HTTP_TIMEOUT_S):
                 response = await self.http.post(
-                    f"http://127.0.0.1:{self.config.GAME_PORT}/stt/{path}", json=body
+                    f"http://127.0.0.1:{self.config.APP_PORT}/stt/{path}", json=body
                 )
                 response.raise_for_status()
             return True
         except (httpx.HTTPError, TimeoutError, OSError):
-            LOG.warning("Game server %s delivery failed", path)
+            LOG.warning("Checkpoint server %s delivery failed", path)
             return False
 
     async def _heartbeat(self):
@@ -107,10 +107,6 @@ class Engine:
                     self.audio.queue.get(), self.config.STT_HEARTBEAT_S * 2
                 )
             except TimeoutError:
-                # Verified 2026-10-29: KeepAlive is documented only for Nova.
-                # https://developers.deepgram.com/docs/audio-keep-alive
-                if self.config.STT_BACKEND == "nova3":
-                    await socket.send(json.dumps({"type": "KeepAlive"}))
                 continue
             if self.audio.generation != generation:
                 raise SourceChanged
@@ -121,7 +117,6 @@ class Engine:
             wall, pcm = item
             if self.mapper is None:
                 self.mapper = Mapper(
-                    self.config.STT_BACKEND,
                     self.engine_id,
                     self.session,
                     wall,
@@ -173,7 +168,7 @@ class Engine:
         raise SourceChanged
 
     async def _session(self):
-        # Verified 2026-10-29: Token auth, EU v1/v2 and raw linear16, 80 ms.
+        # Verified 2026-11-01: Token auth, EU v2 and raw linear16, 80 ms.
         # https://developers.deepgram.com/changelog/2025/12/3
         # https://developers.deepgram.com/docs/flux/quickstart
         async with self.connector(
