@@ -27,13 +27,13 @@ def test_fake_mic_frames_arrive_and_page_reconnects_after_engine_restart():
     thread.start()
     received = []
     state = {}
-    game_listener = socket.socket()
-    game_listener.bind(("127.0.0.1", 0))
-    game_port = game_listener.getsockname()[1]
+    app_listener = socket.socket()
+    app_listener.bind(("127.0.0.1", 0))
+    app_port = app_listener.getsockname()[1]
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
         mic_port = reservation.getsockname()[1]
-    config = replace(Config(), APP_PORT=game_port, ENGINE_AUDIO_PORT=mic_port)
+    config = replace(Config(), APP_PORT=app_port, ENGINE_AUDIO_PORT=mic_port)
 
     class Connection:
         async def __aenter__(self):
@@ -80,7 +80,7 @@ def test_fake_mic_frames_arrive_and_page_reconnects_after_engine_restart():
             uvicorn.Config(create_app(config=config), log_level="error")
         )
         state["server"] = server
-        state["serving"] = asyncio.create_task(server.serve(sockets=[game_listener]))
+        state["serving"] = asyncio.create_task(server.serve(sockets=[app_listener]))
         while not server.started:
             await asyncio.sleep(0.01)
         await start_engine()
@@ -113,7 +113,7 @@ def test_fake_mic_frames_arrive_and_page_reconnects_after_engine_restart():
                 page = browser.new_page(
                     permissions=["microphone"], viewport={"width": 1000, "height": 900}
                 )
-                page.goto(f"http://127.0.0.1:{game_port}/mic")
+                page.goto(f"http://127.0.0.1:{app_port}/mic")
                 page.get_by_role("button", name="Start microphone", exact=True).click()
                 expect(page.locator("#connection")).to_have_text("Connected")
                 until(lambda: received and received[0] >= 3)

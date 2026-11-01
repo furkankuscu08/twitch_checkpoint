@@ -51,7 +51,7 @@ def test_wav_cli_hypotheses_reach_server(caplog):
             await asyncio.wait_for(process.communicate(), 50)
             assert process.returncode == 0, "STT CLI failed; inspect safe engine logs"
             records = [r for r in caplog.records if r.name == "checkpoint.server.app"]
-            hypotheses = [r.args[0] for r in records if r.msg == "STT hypothesis %s"]
+            hypotheses = [r.args for r in records if r.msg == "STT hypothesis %s"]
             finals = [h for h in hypotheses if h["final"]]
             assert len(finals) == 3
             assert len({h["utt_id"] for h in finals}) == 3
@@ -64,7 +64,7 @@ def test_wav_cli_hypotheses_reach_server(caplog):
                 group = [h for h in hypotheses if h["utt_id"] == utt_id]
                 assert [h["seq"] for h in group] == list(range(len(group)))
                 assert len({h["utt_start_wall"] for h in group}) == 1
-            statuses = [r.args[0] for r in records if r.msg == "STT status %s"]
+            statuses = [r.args for r in records if r.msg == "STT status %s"]
             assert any(s["deepgram"] == "connected" for s in statuses)
             assert statuses[-1]["deepgram"] == "disconnected"
         finally:

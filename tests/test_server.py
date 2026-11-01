@@ -71,3 +71,15 @@ def test_malformed_json_and_missing_fields_are_rejected(path):
     with TestClient(create_app()) as client:
         assert client.post(f"/stt/{path}", content="not json").status_code == 422
         assert client.post(f"/stt/{path}", json={}).status_code == 422
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_nonfinite_json_is_rejected_without_a_server_error(value):
+    import json
+
+    body = json.dumps(hypothesis()).replace(
+        '"utt_start_wall": 1000.0', f'"utt_start_wall": {value}'
+    )
+    with TestClient(create_app()) as client:
+        assert client.post("/stt/hypothesis", content=body).status_code == 422
+        assert client.post("/stt/hypothesis", json=hypothesis()).is_success
