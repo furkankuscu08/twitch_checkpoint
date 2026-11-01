@@ -81,6 +81,7 @@ def run():
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b'{"ok":true,"queued":true}')
+    HTTPServer.allow_reuse_address = True
     HTTPServer(("127.0.0.1", int(os.environ["APP_PORT"])), Handler).serve_forever()
 
 
@@ -97,6 +98,7 @@ def free_port():
 
 def available(port):
     with socket.socket() as listener:
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             listener.bind(("127.0.0.1", port))
         except OSError:
@@ -296,6 +298,10 @@ def test_shutdown_terminates_child_descendants(checkout):
     assert available(descendant_port)
     assert available(int(env["APP_PORT"]))
     assert available(int(env["ENGINE_AUDIO_PORT"]))
+    for call in calls():
+        if "pid" in call:
+            with pytest.raises(ProcessLookupError):
+                os.kill(call["pid"], 0)
 
 
 def test_invalid_demo_engine_args_fail_without_children(checkout):
@@ -304,3 +310,17 @@ def test_invalid_demo_engine_args_fail_without_children(checkout):
     output, _ = process.communicate(timeout=8)
     assert process.returncode != 0, output
     assert calls() == []
+
+
+def test_interrupt_during_readiness_stops_server_without_seeding(checkout):
+    _, env, calls, start = checkout
+    process = start("--demo", updates={"FAKE_UNREADY": "1"})
+    wait_until(lambda: not available(int(env["APP_PORT"])))
+    process.terminate()
+    output, _ = process.communicate(timeout=8)
+    assert process.returncode in (0, 143), output
+    assert not any("path" in call for call in calls())
+    assert available(int(env["APP_PORT"]))
+    for call in calls():
+        with pytest.raises(ProcessLookupError):
+            os.kill(call["pid"], 0)
