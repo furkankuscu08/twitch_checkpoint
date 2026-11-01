@@ -24,6 +24,15 @@ def pending(core):
     return list(core.pending.values())[-1]
 
 
+def test_typed_answer_is_visible_before_its_answered_stamp(new_core, chat_event):
+    core = open_card(new_core, chat_event)
+    events = core.typed("VS Code, with a quiet theme.", now=11)
+    assert events[0]["type"] == "answer"
+    assert events[0]["final_text"] == "VS Code, with a quiet theme."
+    assert events[0]["partial_text"] == ""
+    assert events[1] == dict(type="card_close", id="m1", result="answered")
+
+
 def test_question_only_is_echo_and_does_not_start_grace(new_core, chat_event, speech):
     question = "Which editor theme supports Python?"
     core = open_card(new_core, chat_event, question)

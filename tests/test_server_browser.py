@@ -98,6 +98,9 @@ def test_dock_and_overlay_share_server_state_without_real_twitch(speech):
                     "I use my favourite editor."
                 )
                 dock.get_by_role("button", name="Send typed answer").click()
+                expect(overlay.locator("#final-text")).to_have_text(
+                    "I use my favourite editor."
+                )
                 dock.get_by_role("button", name="Skip", exact=True).click()
                 step(1008.5)
                 assert [i.reply.kind for i in sent] == ["plain", "quote"]
