@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Checkpoint dock</title>
+  <link rel="stylesheet" href="/assets/theme.css">
+  <link rel="stylesheet" href="/dock/style.css">
+  <script type="module" src="/dock/app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand"><span class="diamond" aria-hidden="true"></span><h1>Checkpoint</h1><span id="demo-label" hidden>DEMO</span></div>
+    <div class="connection-line"><span id="connection" role="status">Connecting…</span><span class="hint">your words, saved</span></div>
+  </header>
+  <section class="topline" aria-label="Stream controls">
+    <div class="statuses" aria-label="Connection status">
+      <span data-status="mic" data-state="disconnected" title="Microphone">mic <i></i></span>
+      <span data-status="engine" data-state="disconnected" title="STT engine">stt <i></i></span>
+      <span data-status="deepgram" data-state="disconnected" title="Deepgram">flux <i></i></span>
+      <span data-status="eventsub" data-state="disconnected" title="Twitch EventSub">chat <i></i></span>
+    </div>
+    <button id="focus" aria-label="Focus" aria-pressed="false">Focus <span aria-hidden="true">○</span></button>
+  </section>
+
+  <section id="card" class="panel" aria-label="Current card">
+    <div class="section-label"><span id="card-position">SAVE POINT</span><span id="card-name"></span></div>
+    <div id="empty-card"><span class="diamond" aria-hidden="true"></span><h2>Keep your focus.</h2><p>Collect chat, then open a checkpoint.</p></div>
+    <div id="card-content" hidden>
+      <h2 id="card-question"></h2>
+      <p id="echo"></p>
+      <p id="answer"><span id="answer-final"></span><span id="answer-partial"></span><span class="caret" aria-hidden="true">▍</span></p>
+      <div id="grace" hidden><span>Closing in <span id="grace-count"></span></span><progress id="grace-progress" max="1" value="1" aria-label="Answer grace time"></progress></div>
+    </div>
+  </section>
+
+  <section class="actions" aria-label="Card actions">
+    <button id="checkpoint" class="primary" aria-label="Checkpoint">◆ Checkpoint</button>
+    <button id="next" class="primary" aria-label="Next" hidden>✓ Next</button>
+    <button id="skip" hidden>Skip</button>
+  </section>
+
+  <section id="pending" class="panel" aria-label="Pending reply" hidden>
+    <div class="section-label"><span>REPLY WINDOW</span><span id="pending-count"></span></div>
+    <p class="sending">Sending to <strong id="pending-name"></strong> <span id="pending-time"></span></p>
+    <p id="pending-text"></p>
+    <div class="pending-bottom"><progress id="pending-progress" max="1" value="1" aria-label="Quote cancellation time"></progress><button id="cancel">Cancel quote</button></div>
+  </section>
+
+  <section id="summary" role="status" hidden></section>
+  <p id="notice" role="alert"></p>
+
+  <section id="queue" aria-label="Queued messages">
+    <div class="section-label queue-heading"><h2>Queue <span id="queue-count">0</span></h2><span id="queue-hint">Questions first</span></div>
+    <ul id="queue-list"></ul>
+    <p id="empty-queue">Saved messages will appear here.</p>
+  </section>
+
+  <form id="typed-form">
+    <label for="typed">Typed answer</label>
+    <div class="typed-row"><textarea id="typed" rows="2" placeholder="Type an answer…"></textarea><button id="typed-send" type="submit" aria-label="Send typed answer">↗</button></div>
+    <div class="footer"><span>For a quiet checkpoint</span><button id="clear" type="button">Clear</button></div>
+  </form>
+</main>
+</body>
+</html>
