@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from .text import has_blocked, has_url, is_question
+from .text import has_blocked, has_url, is_noise, is_question
 
 FALLBACK_COLORS = ("#69e3ca", "#a8b5ff", "#ffc878", "#f2a7cc", "#83cbf5", "#c6db89")
 
@@ -68,6 +68,7 @@ class MessageQueue:
                 )
                 or has_url(text)
                 or has_blocked(text, self.blocklist)
+                or is_noise(event["message"]["fragments"])
             ):
                 return None
             if (

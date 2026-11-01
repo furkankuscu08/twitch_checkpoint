@@ -12,6 +12,14 @@ STOPWORDS = frozenset(
     "have has had i me my we us our you your he him his she her they them their "
     "it its it's and or but if then than as so not of to in on at for from with".split()
 )
+# Noise and leading chat salutations only; never change matcher/echo stopwords.
+GREETING_REACTIONS = frozenset(
+    "hi hello hey heya hiya yo sup howdy lol lul lmao rofl ha gg ggs wp o7 "
+    "pog poggers w first chat everyone guys gm gn morning evening night good nice "
+    "thanks thank ty thx welcome bye cya".split()
+)
+LAUGHTER = re.compile(r"(?:ha)+")
+MENTION = re.compile(r"(?<!\w)@[a-z0-9_]+")
 WORD = re.compile(r"[^\W_]+(?:['’][^\W_]+)*", re.UNICODE)
 URL = re.compile(r"\b[a-z][a-z0-9+.-]*://|\bwww\.|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b")
 
@@ -22,6 +30,25 @@ def normalize(text):
 
 def words(text):
     return tuple(WORD.findall(normalize(text)))
+
+
+def is_greeting_reaction(word):
+    return word in GREETING_REACTIONS or LAUGHTER.fullmatch(word) is not None
+
+
+def is_noise(fragments):
+    """Only text-fragment words matter; unknown words always keep a message."""
+    try:
+        tokens = (
+            word
+            for fragment in fragments
+            if fragment["type"] == "text"
+            for word in words(MENTION.sub(" ", normalize(fragment["text"])))
+        )
+        return all(word in STOPWORDS or is_greeting_reaction(word) for word in tokens)
+    except (KeyError, TypeError, AttributeError):
+        # Malformed events are rejected by the intake, not classified as noise.
+        return False
 
 
 def content_words(text):

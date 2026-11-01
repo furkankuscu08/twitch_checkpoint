@@ -10,6 +10,7 @@ import httpx
 
 from checkpoint.core.config import SECONDS_PER_MINUTE
 from checkpoint.core.state import Checkpoint
+from checkpoint.core.text import is_noise
 from checkpoint.twitch_api.auth import AuthError
 
 from .hub import Hub
@@ -151,7 +152,15 @@ class Runtime:
         if events and debug:
             self.debug_ids.add(event["message_id"])
         if not events:
-            LOG.debug("Chat intake dropped (focus, filter, duplicate or cap)")
+            fragments = (
+                event.get("message", {}).get("fragments")
+                if isinstance(event, dict) and isinstance(event.get("message"), dict)
+                else None
+            )
+            if self.core.focus and is_noise(fragments):
+                LOG.debug("Chat intake dropped reason=noise")
+            else:
+                LOG.debug("Chat intake dropped (focus, filter, duplicate or cap)")
         self.emit(events)
         return bool(events)
 
