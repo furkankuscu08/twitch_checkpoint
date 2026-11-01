@@ -48,6 +48,22 @@ def inject(client, user="viewer", text="Which editor do you use?"):
     return response.json()["id"]
 
 
+def test_noise_drop_logs_reason_without_text_or_overlay_events(caplog):
+    app = make_app([1000.0], [])
+    with caplog.at_level(logging.DEBUG, logger="checkpoint.server.runtime"):
+        with TestClient(app) as client:
+            client.post("/dock/focus", json={"on": True})
+            response = client.post(
+                "/dock/debug/chat", json={"user": "viewer", "text": "hahahaha hi"}
+            )
+            assert response.json()["queued"] is False
+            assert app.state.runtime.snapshot("overlay")["queue"] == []
+    records = [r for r in caplog.records if r.name == "checkpoint.server.runtime"]
+    assert any("reason=noise" in r.getMessage() for r in records)
+    assert all("hahahaha" not in r.getMessage() for r in records)
+    assert all(r.levelno < logging.INFO for r in records)
+
+
 def test_debug_three_messages_hypotheses_cancel_and_threaded_deadlines(speech):
     now, sent = [1000.0], []
     app = make_app(now, sent)

@@ -76,11 +76,18 @@ A `channel.chat.message` event is queued only if all of these hold:
 - At least one `text` fragment contains a letter. Emote-only messages are skipped, because emote names appear in `message.text` as plain words.
 - It contains no URL.
 - No word is on the blocklist (§3 Blocklist).
+- It is not **noise**: after ignoring emote/mention fragments and @mentions in
+  text fragments, drop only when every word is a stopword or a fixed greeting /
+  reaction: `hi hello hey heya hiya yo sup howdy lol lul lmao rofl ha gg ggs wp o7
+  pog poggers w first chat everyone guys gm gn morning evening night good nice
+  thanks thank ty thx welcome bye cya`. Exact repetitions of `ha` also count.
+  Any other word keeps the message eligible. Question words and `?` do not exempt
+  noise. The fixed set lives separately from matcher stopwords, with no toggle.
 
 **Caps:**
 - At most `PER_USER_PENDING` (2) pending messages per viewer; a third one is dropped.
 - At most `QUEUE_MAX` (30) messages in total; when the queue is full, new messages are dropped. Both caps include unanswered messages in the active checkpoint, including the open card.
-- Dropped messages are logged without their text.
+- Dropped messages are logged without their text; noise uses `reason=noise` at DEBUG.
 
 **Order:** questions first, then the rest, each group oldest first. A message is a question if it ends with `?` or starts with a question word (`what, why, how, when, where, who, which, is, are, do, does, can, will, should`).
 
@@ -241,6 +248,9 @@ Each WP is done when its acceptance criteria pass and `uv run pytest` and `uv ru
 | WP5 | **`web/dock`**, with the layout in §8: status line, focus toggle, Checkpoint/Next/Skip, pending reply with countdown and Cancel quote, queue list with text and earlier-answer chips, typed box, Clear | Works as an OBS custom dock at 400 px without overflow (checked with `shoot.py dock`). |
 | WP6 | **Live checks and ops:** `live` test, `scripts/chat_script.py`, `scripts/run_all.sh` (+ `--demo`), README with the "Relation to Minefield" table | A `live` test as the test account sends a question; the checkpoint answers it with typed text, and the bot's reply is threaded under that message (`is_sent: true`). `chat_script.py FILE` validates the complete JSON list of `{account, delay_s, text}` before network activity, waits each delay after the preceding attempt completes, sends from test/test2/test3 with one attempt each, and prints only success or failure per entry. `run_all.sh --demo` runs without any key, and the README's no-key path works from a fresh clone. |
 | WP7 | **Polish and rehearsal fixes** | Two uninterrupted checkpoints on the real mic, with 5+ messages each from `chat_script.py`. Check the saved hypotheses for cut-off answers, and tune `ANSWER_GRACE_S` and `ATTRIB_SLACK_S` if needed. |
+
+WP1 filter acceptance also includes the deliberately narrow noise keep/drop table,
+with emote/mention fragments excluded and any unlisted content word preserved.
 
 WP2 includes the minimal pure plumbing config and local server needed for `/mic`
 and validated `/stt/hypothesis`, `/stt/status` and `/stt/abort` intake. Intake is
