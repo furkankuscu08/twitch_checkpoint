@@ -48,6 +48,7 @@ class Engine:
         self.mapper = None
         self.mic_socket = None
         self.closing = False
+        self.turn_finished = asyncio.Event()
         self.lags = deque(maxlen=config.STT_LAG_WINDOW)
 
     def status(self):
@@ -124,11 +125,11 @@ class Engine:
                 )
             await socket.send(pcm)
 
-    async def _receive(self, socket, generation):
+    async def _receive(self, socket):
         try:
             async for raw in socket:
-                if self.audio.generation != generation:
-                    raise SourceChanged
+                # This connection retains its own mapper until teardown. Keep
+                # reading its final response while a replacement source waits.
                 now = self.clock()
                 message = json.loads(raw)
                 if not isinstance(message, dict):
@@ -145,6 +146,8 @@ class Engine:
                         await self._post("abort", {"utt_id": hypothesis["utt_id"]})
                         self.mapper.abort()
                         raise SourceChanged
+                    if hypothesis["final"]:
+                        self.turn_finished.set()
         except websockets.ConnectionClosed:
             if not self.closing:
                 raise
@@ -164,8 +167,27 @@ class Engine:
                 ):
                     self.audio.stop()
                     if self.mic_socket is not None:
+                        LOG.warning("Mic PCM timed out; closing source code=1013")
                         await self.mic_socket.close(code=1013)
         raise SourceChanged
+
+    async def _finish_turn(self, socket):
+        if self.mapper is None:
+            return
+        if self.mapper.utt_id is None and self.turn_finished.is_set():
+            return
+        self.turn_finished.clear()
+        try:
+            # Verified 2026-11-01: ForceEndTurn requests an actual EndOfTurn;
+            # CloseStream alone only flushes Updates. Never promote an Update.
+            # https://developers.deepgram.com/docs/flux/force-end-turn
+            # https://developers.deepgram.com/docs/flux/close-stream
+            async with asyncio.timeout(self.config.STT_HTTP_TIMEOUT_S):
+                await socket.send(json.dumps({"type": "ForceEndTurn"}))
+                await self.turn_finished.wait()
+            LOG.info("Mic source ended; final turn delivered")
+        except (OSError, TimeoutError, websockets.WebSocketException):
+            LOG.warning("Mic final turn unavailable; aborting pending speech")
 
     async def _session(self):
         # Verified 2026-11-01: Token auth, EU v2 and raw linear16, 80 ms.
@@ -182,11 +204,13 @@ class Engine:
                 return
             self.connected = True
             self.closing = False
+            source = self.mic_socket
+            self.turn_finished.clear()
             generation = self.audio.generation
             self.audio.changed.clear()
             self.audio.activate()
             sender = asyncio.create_task(self._send(socket, generation))
-            reader = asyncio.create_task(self._receive(socket, generation))
+            reader = asyncio.create_task(self._receive(socket))
             watcher = asyncio.create_task(self._watch(generation))
             try:
                 done, _ = await asyncio.wait(
@@ -202,6 +226,15 @@ class Engine:
                     await asyncio.wait_for(reader, self.config.ENGINE_TIMEOUT_S)
                 elif not self.closing:
                     raise SourceChanged
+            except SourceChanged:
+                if reader in done or self.mic_socket is source:
+                    # Broken provider/delivery or lost PCM continuity still
+                    # invalidates the turn. Only a mic handoff gets a drain.
+                    raise
+                sender.cancel()
+                watcher.cancel()
+                await asyncio.gather(sender, watcher, return_exceptions=True)
+                await self._finish_turn(socket)
             finally:
                 for task in (sender, reader, watcher):
                     task.cancel()
@@ -317,6 +350,7 @@ class Engine:
             self.mic_socket = socket
             self.audio.start(self.clock())
             if old is not None:
+                LOG.info("Mic source replaced")
                 await old.close(code=1012)
             async for pcm in socket:
                 if self.mic_socket is not socket:
@@ -324,15 +358,21 @@ class Engine:
                 if not isinstance(pcm, bytes) or len(pcm) != FRAME_BYTES:
                     raise ValueError("Invalid mic PCM frame")
                 self.audio.feed(pcm, self.clock())
+        except websockets.ConnectionClosed:
+            pass
         except (
             ValueError,
             KeyError,
             TypeError,
             TimeoutError,
-            websockets.ConnectionClosed,
         ):
+            LOG.warning("Mic protocol rejected; closing source code=1008")
             await socket.close(code=1008)
         finally:
+            code = getattr(socket, "close_code", None)
+            LOG.info(
+                "Mic disconnected code=%s", code if type(code) is int else "unknown"
+            )
             if self.mic_socket is socket:
                 self.mic_socket = None
                 self.audio.stop()

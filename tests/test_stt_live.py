@@ -5,14 +5,19 @@ import logging
 import os
 import socket
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
+import httpx
 import pytest
 import uvicorn
+from dotenv import load_dotenv
 
 from checkpoint.core.config import Config
 from checkpoint.server.app import create_app
+from checkpoint.stt.audio import wav_chunks
+from checkpoint.stt.engine import Engine
 
 pytestmark = pytest.mark.live
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,6 +78,59 @@ def test_wav_cli_hypotheses_reach_server(caplog):
                 await process.communicate()
             server.should_exit = True
             await serving
+
+    with caplog.at_level(logging.DEBUG, logger="checkpoint.server.app"):
+        asyncio.run(scenario())
+
+
+def test_live_mic_source_stop_requests_final_from_flux(caplog):
+    """Use recorded PCM to exercise mic teardown while a Flux turn is open."""
+    wav = ROOT / "data/recordings/wp2-tts.wav"
+    if not wav.exists():
+        pytest.skip("Provide the recorded 16 kHz mono TTS WAV in data/recordings")
+    load_dotenv(ROOT / ".env")
+    key = os.environ.get("DEEPGRAM_API_KEY")
+    if not key:
+        pytest.skip("DEEPGRAM_API_KEY is required for the explicit live check")
+
+    def hypotheses():
+        return [r.args for r in caplog.records if r.msg == "STT hypothesis %s"]
+
+    async def until(predicate):
+        async with asyncio.timeout(10):
+            while not predicate():
+                await asyncio.sleep(0.01)
+
+    async def scenario():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=create_app())
+        ) as http:
+            engine = Engine(key, Config(), http)
+            engine.mic_socket = object()
+            engine.audio.start(time.time())
+            running = asyncio.create_task(engine.run())
+            try:
+                await until(lambda: engine.audio.accepting)
+                started = time.monotonic()
+                for offset, pcm in wav_chunks(wav):
+                    if offset >= 1.6:
+                        break
+                    await asyncio.sleep(max(0, started + offset - time.monotonic()))
+                    engine.audio.feed(pcm, time.time())
+                await until(lambda: bool(hypotheses()))
+                assert not any(h["final"] for h in hypotheses())
+                original_id = hypotheses()[0]["utt_id"]
+                engine.mic_socket = None
+                engine.audio.stop()
+                await until(lambda: any(h["final"] for h in hypotheses()))
+                finals = [h for h in hypotheses() if h["final"]]
+                assert len(finals) == 1
+                assert finals[0]["utt_id"] == original_id
+                assert finals[0]["words"]
+                assert not any(r.msg == "STT abort %s" for r in caplog.records)
+            finally:
+                running.cancel()
+                await asyncio.gather(running, return_exceptions=True)
 
     with caplog.at_level(logging.DEBUG, logger="checkpoint.server.app"):
         asyncio.run(scenario())

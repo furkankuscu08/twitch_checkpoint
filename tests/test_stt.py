@@ -312,7 +312,7 @@ def test_failed_hypothesis_post_aborts_instead_of_retrying():
             engine = Engine("not-a-real-key", Config(), http)
             engine.mapper = Mapper("p", 1, 1000)
             with pytest.raises(SourceChanged):
-                await engine._receive(Socket(), engine.audio.generation)
+                await engine._receive(Socket())
             await engine._abort()
         assert sum(path.endswith("hypothesis") for path, _ in posts) == 1
         assert sum(path.endswith("abort") for path, _ in posts) == 1
@@ -360,7 +360,7 @@ def test_failed_final_aborts_its_own_id_once_before_session_cleanup(abort_respon
             engine = Engine("not-a-real-key", Config(), http)
             engine.mapper = Mapper("p", 1, 1000)
             with pytest.raises(SourceChanged):
-                await engine._receive(Socket(), engine.audio.generation)
+                await engine._receive(Socket())
             assert [path for path, _ in posts] == [
                 "/stt/hypothesis",
                 "/stt/hypothesis",
@@ -482,3 +482,126 @@ def test_engine_instances_have_fresh_process_identifiers():
         Engine("fake", Config(), None).engine_id
         != Engine("fake", Config(), None).engine_id
     )
+
+
+@pytest.mark.parametrize("source_change", ["stop", "replacement"])
+@pytest.mark.parametrize("final_response", ["final", "timeout", "delivery-failure"])
+def test_mic_boundary_requests_real_final_before_close(source_change, final_response):
+    import httpx
+
+    async def scenario():
+        posts, controls = [], []
+        messages = [r["message"] for r in recording("flux")]
+        update = next(m for m in messages if m.get("event") == "Update" and m["words"])
+        final = next(m for m in messages if m.get("event") == "EndOfTurn")
+        partial_received = asyncio.Event()
+
+        def handle(request):
+            body = json.loads(request.content)
+            posts.append((request.url.path, body))
+            if request.url.path.endswith("hypothesis"):
+                partial_received.set()
+                if body["final"] and final_response == "delivery-failure":
+                    return httpx.Response(503)
+            return httpx.Response(200)
+
+        class Socket:
+            def __init__(self):
+                self.incoming = asyncio.Queue()
+
+            async def send(self, raw):
+                if isinstance(raw, bytes):
+                    self.incoming.put_nowait(json.dumps(update))
+                else:
+                    kind = json.loads(raw)["type"]
+                    controls.append(kind)
+                    if kind == "ForceEndTurn" and final_response != "timeout":
+                        self.incoming.put_nowait(json.dumps(final))
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                return await self.incoming.get()
+
+        socket = Socket()
+
+        class Connection:
+            async def __aenter__(self):
+                return socket
+
+            async def __aexit__(self, *_):
+                pass
+
+        config = replace(Config(), STT_HTTP_TIMEOUT_S=0.05)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
+            engine = Engine(
+                "fake", config, http, connector=lambda *a, **k: Connection()
+            )
+            engine.mic_socket = object()
+            engine.audio.start(1000)
+            session = asyncio.create_task(engine._session())
+            try:
+                async with asyncio.timeout(1):
+                    while not engine.audio.accepting:
+                        await asyncio.sleep(0)
+                engine.audio.feed(bytes(2560), 1000)
+                await asyncio.wait_for(partial_received.wait(), 1)
+                if source_change == "stop":
+                    engine.mic_socket = None
+                    engine.audio.stop()
+                else:
+                    engine.mic_socket = object()
+                    engine.audio.start(2000)
+                await asyncio.wait_for(session, 1)
+                await engine._abort()
+            finally:
+                session.cancel()
+                await asyncio.gather(session, return_exceptions=True)
+            assert controls == ["ForceEndTurn", "CloseStream"]
+            hypotheses = [body for path, body in posts if path.endswith("hypothesis")]
+            aborts = [body for path, body in posts if path.endswith("abort")]
+            if final_response == "final":
+                assert hypotheses[-1]["final"]
+                assert hypotheses[-1]["utt_id"] == hypotheses[0]["utt_id"]
+                assert hypotheses[-1]["utt_start_wall"] == 1000
+                assert [w["text"] for w in hypotheses[-1]["words"]] == [
+                    w["word"] for w in final["words"]
+                ]
+                assert not aborts
+            else:
+                assert aborts == [{"utt_id": hypotheses[0]["utt_id"]}]
+                if final_response == "timeout":
+                    assert len(hypotheses) == 1 and not hypotheses[0]["final"]
+
+    asyncio.run(scenario())
+
+
+def test_closed_mic_transport_is_not_reported_as_bad_pcm(caplog):
+    import httpx
+    import websockets
+
+    class Socket:
+        request = type("Request", (), {"path": "/audio"})()
+        close_code = 1006
+
+        async def recv(self):
+            return json.dumps(
+                dict(type="hello", sample_rate=16000, client_start_wall=1)
+            )
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise websockets.ConnectionClosedError(None, None)
+
+        async def close(self, code):
+            pytest.fail("A closed transport must not be rejected as malformed PCM")
+
+    async def scenario():
+        async with httpx.AsyncClient() as http:
+            await Engine("fake", Config(), http).mic(Socket())
+
+    asyncio.run(scenario())
+    assert "protocol rejected" not in caplog.text

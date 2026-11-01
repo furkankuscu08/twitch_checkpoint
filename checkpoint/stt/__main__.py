@@ -42,7 +42,9 @@ def main(argv=None):
         key = environ.get("DEEPGRAM_API_KEY")
         if not key:
             raise ValueError("DEEPGRAM_API_KEY is missing")
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+        logging.basicConfig(
+            level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+        )
         # httpx INFO contains request URLs; no bodies, but avoid needless hot-path logs.
         logging.getLogger("httpx").setLevel(logging.WARNING)
         with ExitStack() as stack:
