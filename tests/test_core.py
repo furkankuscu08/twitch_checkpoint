@@ -361,3 +361,93 @@ def test_active_checkpoint_messages_still_count_against_caps(new_core, chat_even
     assert core.collect(chat_event("m3", user="someoneelse"), now=11) == []
     core.next(now=12)
     assert core.collect(chat_event("m3", user="someoneelse"), now=13)
+
+
+def test_inputs_are_copied_and_cannot_rewrite_a_live_answer(
+    new_core, chat_event, speech
+):
+    core = new_core()
+    core.set_focus(True)
+    event = chat_event()
+    core.collect(event, now=0)
+    event["message"]["text"] = "Mutated outside the core"
+    core.checkpoint(now=10)
+    assert core.card.message.text == "Which editor do you use?"
+    payload = speech("Original words.")
+    core.hypothesis(payload, now=11)
+    payload["words"][0]["text"] = "Mutated"
+    assert core.card.partial_text == "Original words."
+
+
+def test_earlier_sends_during_checkpoint_and_duplicate_success_ack(
+    new_core, chat_event
+):
+    core = open_card(new_core, chat_event, text="What editor is that?")
+    core.typed("Visual Studio Code.", now=11)
+    core.tick(now=16)
+    core.collect(
+        chat_event("repeat", user="repeatviewer", text="Which editor do you use?"),
+        now=17,
+    )
+    core.collect(
+        chat_event("unrelated", user="someone", text="How much memory is installed?"),
+        now=18,
+    )
+    core.checkpoint(now=20)
+    assert core.card.message.message_id == "repeat"
+    assert core.send_earlier("repeat", now=20) is None
+    core.skip(now=21)
+    core.collect(
+        chat_event("nextrepeat", user="nextviewer", text="What editor is that?"), now=22
+    )
+    assert core.send_earlier("nextrepeat", now=23)
+    core.earlier_result("nextrepeat", is_sent=True)
+    core.earlier_result("nextrepeat", is_sent=True)
+    core.skip(now=24)
+    assert core.summary == dict(answered=0, earlier=1, skipped=2)
+
+
+def test_take_due_replies_honors_each_deadline_and_cancel_never_replies_twice(
+    new_core, chat_event
+):
+    core = open_card(new_core, chat_event, count=2)
+    core.typed("First actual answer.", now=11)
+    first = pending(core)
+    core.typed("Second actual answer.", now=12)
+    second = pending(core)
+    assert core.take_due_replies(now=15.99) == []
+    core.cancel_quote(first.id, now=15.99)
+    assert [p.reply.kind for p in core.take_due_replies(now=16)] == ["plain"]
+    assert not core.answered.pairs
+    assert [p.id for p in core.take_due_replies(now=17)] == [second.id]
+    assert [p.quote for p in core.answered.pairs] == ["Second actual answer."]
+    assert core.take_due_replies(now=100) == []
+
+
+def test_per_viewer_cap_includes_the_open_card(new_core, chat_event):
+    core = new_core()
+    core.set_focus(True)
+    core.collect(chat_event("one"), now=0)
+    core.collect(chat_event("two"), now=1)
+    core.checkpoint(now=10)
+    assert core.collect(chat_event("three"), now=11) == []
+    core.next(now=12)
+    assert core.collect(chat_event("three"), now=13)
+
+
+def test_earlier_reply_reports_elapsed_whole_minutes(new_core, chat_event):
+    core = open_card(new_core, chat_event, text="What editor is that?")
+    core.typed("Visual Studio Code.", now=11)
+    core.tick(now=16)
+    core.collect(
+        chat_event("repeat", user="repeatviewer", text="Which editor do you use?"),
+        now=190,
+    )
+    reply = core.send_earlier("repeat", now=191)
+    assert (
+        reply.text == '📌 answered earlier on stream (3 min ago): "Visual Studio Code."'
+    )
+    events = core.earlier_result("repeat", is_sent=True)
+    assert events == [
+        dict(type="earlier_sent", id="repeat", user_name="Repeatviewer", ago_min=3)
+    ]

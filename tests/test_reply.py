@@ -50,3 +50,16 @@ def test_quote_truncation_respects_both_limits_and_checks_full_answer_for_blockl
         ).kind
         == "plain"
     )
+
+
+def test_truncation_does_not_split_a_word_or_invent_a_fragment():
+    from checkpoint.core.reply import build_reply
+
+    answer = "alpha bravo charlie delta echo foxtrot"
+    reply = build_reply(
+        "p", "Viewer", answer, replace(Config(), QUOTE_MAX_CHARS=20), frozenset()
+    )
+    prefix = reply.quote[:-1]
+    assert reply.quote.endswith("…") and answer[len(prefix)] == " "
+    oversized = build_reply("p", "Viewer", "x" * 400 + " ending", Config(), frozenset())
+    assert oversized.kind == "plain" and oversized.quote is None

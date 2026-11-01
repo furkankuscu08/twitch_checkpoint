@@ -119,7 +119,7 @@ When a card closes with ✓, its reply is pending for `CANCEL_WINDOW_S` (5 s). T
   - the answer has fewer than `MIN_QUOTE_WORDS` (2) words;
   - a word in the answer is on the blocklist;
   - the streamer pressed Cancel quote.
-- **Length:** the quote is cut to `QUOTE_MAX_CHARS` (300) at a word boundary, ending with `…`.
+- **Length:** the quote, including its ellipsis, is cut to `QUOTE_MAX_CHARS` (300) at a word boundary, ending with `…`. The full reply also fits `CHAT_MAX_CHARS`; if no complete word fits, use a plain receipt.
 - **The quote's text** is the transcript as heard: the words' text joined with spaces, keeping Flux's own punctuation. No other edits.
 - **Sending:**
   - one attempt per reply, with a 5 s total timeout and no retry;

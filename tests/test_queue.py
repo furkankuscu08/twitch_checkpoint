@@ -106,3 +106,27 @@ def test_stable_fallback_color_and_explicit_receive_time(new_core, chat_event):
     a, b = first.queue.ordered()[0], second.queue.ordered()[0]
     assert a.color == b.color and a.color.startswith("#") and len(a.color) == 7
     assert a.received_at == 123
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        None,
+        {},
+        {"message_id": []},
+        {
+            "message_id": "bad",
+            "chatter_user_login": "viewer",
+            "chatter_user_name": "Viewer",
+            "message_type": "text",
+            "message": {"text": "hello", "fragments": None},
+        },
+    ],
+)
+def test_bad_chat_input_is_rejected_without_breaking_the_queue(
+    new_core, chat_event, event
+):
+    core = new_core()
+    core.set_focus(True)
+    assert core.collect(event, now=0) == []
+    assert core.collect(chat_event(), now=1)
