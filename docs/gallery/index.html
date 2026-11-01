@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkpoint gallery</title>
+<link rel="stylesheet" href="/assets/theme.css">
+<style>
+:root {color-scheme:dark}
+* {box-sizing:border-box} html,body {width:1920px;height:1280px;margin:0;overflow:hidden}
+body {background:var(--cp-background);color:var(--cp-text);font-family:var(--cp-font)}
+.brand {position:absolute;left:88px;top:65px;font-size:24px;letter-spacing:4px;font-weight:bold;color:var(--cp-accent)}
+.brand span {margin-right:14px} h1 {font-size:68px;line-height:1.07;letter-spacing:-2.5px;margin:0;font-weight:600}
+.lead {font-size:28px;line-height:1.5;color:var(--cp-muted);margin:25px 0 0;max-width:1200px}
+.heading {position:absolute;left:88px;top:132px}.footer {position:absolute;left:88px;bottom:45px;font-size:20px;letter-spacing:.7px;color:var(--cp-muted)}
+.tag {position:absolute;right:88px;bottom:45px;color:var(--cp-accent);font-size:20px;letter-spacing:1px}
+.editor {position:absolute;left:80px;top:340px;width:1760px;height:820px;border:1px solid var(--cp-border);border-radius:var(--cp-radius);overflow:hidden;background:var(--cp-background)}
+.editor-bar {height:58px;border-bottom:1px solid var(--cp-border);display:flex;align-items:center;padding:0 27px;gap:9px;color:var(--cp-muted);font-size:16px}
+.editor-bar i {width:8px;height:8px;background:var(--cp-border-strong);border-radius:50%}.editor-bar span{margin-left:24px}
+.code {position:absolute;top:110px;left:55px;font:26px/1.9 monospace;color:var(--cp-muted);opacity:.65;white-space:pre}
+.code b {color:var(--cp-accent-muted);font-weight:normal}.code .line {color:var(--cp-border-strong);display:inline-block;width:65px}
+.editor iframe {position:absolute;left:0;top:0;width:1920px;height:890px;border:0;transform:scale(.9166667);transform-origin:top left}
+.dock-copy {position:absolute;left:112px;top:415px;width:770px}.dock-copy h2 {font-size:45px;letter-spacing:-1px;margin:0 0 28px}.feature {margin:32px 0;font-size:25px;line-height:1.5;color:var(--cp-muted)}.feature strong {display:block;color:var(--cp-text);font-size:28px;margin-bottom:5px}.feature strong:before{content:'◆';color:var(--cp-accent);font-size:15px;margin-right:15px}
+.dock-wrap {position:absolute;right:270px;top:158px;width:448px;height:1010px;border:1px solid var(--cp-border-strong);border-radius:var(--cp-radius);overflow:hidden;box-shadow:0 20px 70px color-mix(in srgb,var(--cp-background),transparent 30%)}
+.dock-wrap iframe {width:400px;height:902px;transform:scale(1.12);transform-origin:top left;border:0;background:var(--cp-background)}
+.diagram {position:absolute;left:0;top:290px;width:1920px;height:820px}.node{position:absolute;width:300px;height:160px;padding:30px;border:1px solid var(--cp-border-strong);border-radius:var(--cp-radius);background:var(--cp-surface)}.node .eyebrow{color:var(--cp-accent-muted);font-size:15px;letter-spacing:2px;margin-bottom:12px}.node strong{display:block;font-size:29px;font-weight:500}.node small{display:block;font-size:19px;color:var(--cp-muted);margin-top:12px}.node.server{border-color:var(--cp-accent);height:200px;top:330px}
+.node.mic{left:88px;top:350px}.node.engine{left:510px;top:350px}.node.flux{left:510px;top:40px}.node.server{left:960px}.node.surfaces{left:1450px;top:170px}.node.twitch{left:1450px;top:580px}.diagram svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}.wire{stroke:var(--cp-accent-muted);stroke-width:2.5;fill:none}.wire-label{fill:var(--cp-muted);font:19px Arial,Helvetica,sans-serif}.protocol{font-size:17px}
+</style>
+</head><body>
+<div class="brand"><span>◆</span>CHECKPOINT</div>
+<section id="overlay-image" hidden>
+ <header class="heading"><h1>Answer out loud.<br>Keep your focus.</h1><p class="lead">Your words land on stream, then in the viewer’s own thread.</p></header>
+ <div class="editor"><div class="editor-bar"><i></i><i></i><i></i><span>workspace / app.py</span></div><div class="code"><span class="line">01</span> <b>def</b> save_checkpoint(messages):
+<span class="line">02</span>     <b>for</b> message <b>in</b> messages:
+<span class="line">03</span>         queue.collect(message)
+<span class="line">04</span>
+<span class="line">05</span>     <b>return</b> queue.ready()
+<span class="line">06</span>
+<span class="line">07</span> <b>while</b> focused:
+<span class="line">08</span>     keep_building()</div><iframe title="Actual Checkpoint overlay"></iframe></div>
+</section>
+<section id="dock-image" hidden>
+ <header class="heading"><h1>Answer once.<br>Save it for later.</h1><p class="lead" style="max-width:760px">A quiet control room for the conversation.</p></header>
+ <div class="dock-copy"><div class="feature"><strong>Questions stay in reach</strong>Collect while you build.<br>Open a checkpoint when you’re ready.</div><div class="feature"><strong>Your answer, already there</strong>A repeated question gets an earlier-answer chip.<br>One click shares the exact words again.</div><div class="feature"><strong>You make the call</strong>Next, Skip, or Cancel quote.<br>Nothing replies without your action.</div></div>
+ <div class="dock-wrap"><iframe title="Actual Checkpoint dock"></iframe></div>
+</section>
+<section id="architecture-image" hidden>
+ <header class="heading"><h1>A small pipeline. Your exact words.</h1><p class="lead">Speech recognition transcribes. The streamer decides what gets sent.</p></header>
+ <div class="diagram">
+  <svg viewBox="0 0 1920 820" aria-label="Audio, hypotheses, UI state and Twitch delivery">
+   <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8" fill="var(--cp-accent-muted)"/></marker></defs>
+   <path class="wire" d="M388 430H500" marker-end="url(#arrow)"/><text class="wire-label protocol" x="405" y="409">PCM</text>
+   <path class="wire" d="M630 350V210" marker-end="url(#arrow)"/><path class="wire" d="M690 210V350" marker-end="url(#arrow)"/>
+   <text class="wire-label" x="605" y="270" text-anchor="end">Audio</text><text class="wire-label" x="735" y="270">Turns</text>
+   <path class="wire" d="M810 430H950" marker-end="url(#arrow)"/><text class="wire-label protocol" x="832" y="408">Hypotheses</text>
+   <path class="wire" d="M1260 380H1345V250H1440" marker-end="url(#arrow)"/><text class="wire-label" x="1290" y="224">Live state</text>
+   <path class="wire" d="M1260 470H1340V620H1440" marker-end="url(#arrow)"/><text class="wire-label" x="1145" y="583">Threaded reply</text>
+   <path class="wire" d="M1450 700H1100V540" marker-end="url(#arrow)"/><text class="wire-label" x="1180" y="738">EventSub</text>
+  </svg>
+  <div class="node mic"><div class="eyebrow">BROWSER</div><strong>Mic page</strong><small>16 kHz mono PCM</small></div>
+  <div class="node engine"><div class="eyebrow">LOCAL · WSL</div><strong>STT engine</strong><small>Reconnects + word timing</small></div>
+  <div class="node flux"><div class="eyebrow">SPEECH TO TEXT</div><strong>Deepgram Flux</strong><small>Streaming turns · EU</small></div>
+  <div class="node server"><div class="eyebrow">PURE CORE + LOCAL I/O</div><strong>Server</strong><small>Queue · cards · exact quotes<br>Grace + cancel window</small></div>
+  <div class="node surfaces"><div class="eyebrow">BROWSER SOURCES</div><strong>Overlay + dock</strong><small>Cards + streamer controls</small></div>
+  <div class="node twitch"><div class="eyebrow">CHAT IN · REPLIES OUT</div><strong>Twitch</strong><small>Under the viewer’s message</small></div>
+ </div>
+</section>
+<div class="footer" id="caption">Original interface · fictional sample viewers</div><div class="tag">no LLM · quotes only</div>
+<script>
+const image = new URLSearchParams(location.search).get('image') || 'overlay-answer';
+const section = document.getElementById(image === 'overlay-answer' ? 'overlay-image' : image === 'dock-queue' ? 'dock-image' : 'architecture-image');
+for (const other of document.querySelectorAll('body > section')) if (other !== section) other.remove();
+section.hidden = false;
+if (image === 'overlay-answer') section.querySelector('iframe').src = '/overlay/?demo=1&step=7';
+if (image === 'dock-queue') section.querySelector('iframe').src = '/dock/?demo=1&step=6';
+if (image === 'architecture') document.getElementById('caption').textContent = 'No chat text is sent to speech recognition.';
+window.galleryReady = true;
+</script>
+</body></html>
