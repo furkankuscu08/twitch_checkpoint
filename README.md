@@ -2,7 +2,7 @@
 
 Answer Twitch chat out loud without leaving your work. Checkpoint saves viewer messages while you focus, opens them as cards at a checkpoint, and posts your answer as a threaded reply under each viewer's message.
 
-Deepgram Flux transcribes your words live. There is no LLM, paraphrasing or transcript cleanup. You control every answer, can skip a card, and have five seconds to cancel a quote before it becomes a plain receipt. Repeated questions can receive an earlier answer with one click.
+Deepgram Flux transcribes your words live. There is no LLM, paraphrasing or transcript cleanup. You control every answer, can skip a card, and have five seconds to replace a pending quote with a plain receipt using **Cancel quote**. Repeated questions can receive an earlier answer with one click.
 
 Built for the Codex x TwitchCon Hackathon. See [SPEC.md](SPEC.md) for behavior and acceptance criteria.
 
@@ -37,7 +37,7 @@ The default server port is 8200. To use another port, run `APP_PORT=8300 ./scrip
 ## Full Twitch and speech setup
 
 1. Install dependencies with `uv sync --locked`. Copy `.env.example` to `.env`, then fill in your values. Never commit `.env`, API keys or `data/tokens.json`.
-2. Create your Twitch developer application with the broadcaster's account and use its **Client ID**. The auth CLI uses the public-client device-code flow; no client secret is required. Configure the broadcaster and bot logins, and make the bot a moderator in the channel. The default bot is `checkpoint_bott` (two `t`s).
+2. Create your Twitch developer application with the broadcaster's account, choose the **Public** application/client type, and use its **Client ID**. The auth CLI uses the public-client device-code flow; no client secret is required. Configure the broadcaster and bot logins, and make the bot a moderator in the channel. The default bot is `checkpoint_bott` (two `t`s).
 3. Set `DEEPGRAM_API_KEY`; the default region is `eu`, using Flux `flux-general-en`. Checkpoint does not send questions, chat text, keywords or prompts to Deepgram.
 4. Authorize the bot:
 
