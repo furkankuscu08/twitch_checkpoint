@@ -550,6 +550,63 @@ def test_engine_instances_have_fresh_process_identifiers():
     )
 
 
+@pytest.mark.parametrize("provider_reply", ["final", "no-active-turn"])
+def test_mic_drain_after_previous_final_waits_for_delayed_provider_turn(provider_reply):
+    import httpx
+
+    async def scenario():
+        posts, controls = [], []
+        finals = [r["message"] for r in recording("flux")
+                  if r["message"].get("event") == "EndOfTurn"]
+
+        class Socket:
+            def __init__(self):
+                self.incoming = asyncio.Queue()
+
+            async def send(self, raw):
+                if isinstance(raw, str):
+                    controls.append(json.loads(raw)["type"])
+                    response = finals[1] if provider_reply == "final" else {
+                        "type": "Warning", "code": "FORCE_END_TURN_NO_ACTIVE_TURN"
+                    }
+                    self.incoming.put_nowait(json.dumps(response))
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                return await self.incoming.get()
+
+        def handle(request):
+            posts.append((request.url.path, json.loads(request.content)))
+            return httpx.Response(200)
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
+            engine = Engine("fake", replace(Config(), STT_HTTP_TIMEOUT_S=0.5), http)
+            engine.mapper = Mapper("p", 1, 1000)
+            engine.mapper.process(finals[0], 1005)
+            assert engine.mapper.utt_id is None
+            engine.turn_finished.set()  # The previous turn was already delivered.
+            # New audio was sent, but no Update for it has reached the mapper.
+            socket = Socket()
+            await socket.send(bytes(2560))
+            reader = asyncio.create_task(engine._receive(socket))
+            try:
+                await asyncio.wait_for(engine._finish_turn(socket), 0.2)
+                assert controls == ["ForceEndTurn"]
+                hypotheses = [body for path, body in posts if path.endswith("hypothesis")]
+                if provider_reply == "final":
+                    assert len(hypotheses) == 1 and hypotheses[0]["final"]
+                    assert "volcano" in " ".join(w["text"] for w in hypotheses[0]["words"]).lower()
+                else:
+                    assert not hypotheses
+            finally:
+                reader.cancel()
+                await asyncio.gather(reader, return_exceptions=True)
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize("source_change", ["stop", "replacement"])
 @pytest.mark.parametrize("final_response", ["final", "timeout", "delivery-failure"])
 def test_mic_boundary_requests_real_final_before_close(source_change, final_response):
