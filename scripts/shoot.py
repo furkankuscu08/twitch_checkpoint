@@ -4,6 +4,7 @@ import argparse
 import functools
 import http.server
 import os
+import re
 import threading
 from contextlib import contextmanager
 from pathlib import Path
@@ -46,6 +47,12 @@ def capture(page, name, target):
     page.evaluate("document.fonts.ready")
     if page.evaluate("document.documentElement.scrollWidth > innerWidth"):
         raise RuntimeError(f"{name} overflows its viewport")
+    summary = page.evaluate("""() => {
+      const node = document.getElementById('summary');
+      return node && !node.hidden ? node.innerText : '';
+    }""")
+    if re.search(r"\b0 (answered|from earlier|skipped)\b", summary):
+        raise RuntimeError(f"{name} summary contains a zero count")
     page.screenshot(
         path=str(target), full_page=name != "overlay", omit_background=name == "overlay"
     )

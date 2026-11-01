@@ -40,5 +40,6 @@ export function demoFrames() {
     { label: 'Earlier answer sent', events: [snapshot({ queue: [] }), { type: 'earlier_sent', id: 'repeat', user_name: 'Mehmet', ago_min: 12 }], hold: 2600 },
     { label: 'Threaded reply confirmation', events: [snapshot({ queue: [] }), { type: 'reply_sent', id: 'reply-1', user_name: 'Ana', kind: 'quote', is_sent: true }], hold: 2200 },
     { label: 'Answer once summary', events: [snapshot({ queue: [] }), { type: 'summary', answered: 3, earlier: 1, skipped: 1 }], hold: 3000 },
+    { label: 'Empty checkpoint saved', events: [snapshot({ queue: [] }), { type: 'summary', answered: 0, earlier: 0, skipped: 0 }], hold: 1800 },
   ];
 }

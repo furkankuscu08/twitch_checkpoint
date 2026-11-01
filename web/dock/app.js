@@ -120,7 +120,9 @@ function render() {
     const label = document.createElement('strong');
     label.textContent = 'CHECKPOINT SAVED ✓';
     const {answered, earlier, skipped} = state.stats.summary;
-    $('summary').append(label, `${answered} answered · ${earlier} from earlier · ${skipped} skipped`);
+    const counts = [[answered, 'answered'], [earlier, 'from earlier'], [skipped, 'skipped']]
+      .filter(([count]) => count > 0).map(([count, name]) => `${count} ${name}`).join(' · ');
+    $('summary').append(label, counts);
   }
   timers();
 }
@@ -252,6 +254,7 @@ function demoSnapshot(step) {
   if (step === 6) event.queue = [{...demoRows[0], id: 'mehmet', user_name: 'mehmet', text: 'Which editor do you use?', earlier: {quote: 'It’s VS Code with the system font.', ago_min: 12}}];
   if (step === 7) { event.queue = []; event.stats.summary = {answered: 3, earlier: 1, skipped: 1}; event.stats.summary_until = time + 5; }
   if (step === 8) event.status = {mic: 'disconnected', engine: 'disconnected', deepgram: 'disconnected', eventsub: 'disconnected'};
+  if (step === 9 || step === 10) { event.queue = []; event.stats.summary = {answered: step === 9 ? 3 : 0, earlier: 0, skipped: step === 9 ? 1 : 0}; event.stats.summary_until = time + 5; }
   return event;
 }
 function demoAction(action, data) {
@@ -281,13 +284,13 @@ function demoAction(action, data) {
   render();
 }
 
-window.checkpointDemoStepCount = 9;
+window.checkpointDemoStepCount = 11;
 if (demo) {
   $('demo-label').hidden = false; setText('connection', 'Demo · local preview');
   const query = new URLSearchParams(location.search);
-  let step = Math.max(0, Math.min(8, Number(query.get('step')) || 0));
+  let step = Math.max(0, Math.min(10, Number(query.get('step')) || 0));
   receive(demoSnapshot(step));
-  if (!query.has('step')) setInterval(() => { step = (step + 1) % 9; receive(demoSnapshot(step)); }, 4500);
+  if (!query.has('step')) setInterval(() => { step = (step + 1) % window.checkpointDemoStepCount; receive(demoSnapshot(step)); }, 4500);
 } else {
   render(); connect();
 }

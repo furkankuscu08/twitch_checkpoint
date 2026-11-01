@@ -186,7 +186,10 @@ function renderSummary() {
   $('summary').hidden = !model.summary;
   if (!model.summary) return;
   const { answered, earlier, skipped } = model.summary;
-  $('summary-counts').textContent = `${answered} answered · ${earlier} from earlier · ${skipped} skipped`;
+  const counts = [[answered, 'answered'], [earlier, 'from earlier'], [skipped, 'skipped']]
+    .filter(([count]) => count > 0).map(([count, label]) => `${count} ${label}`).join(' · ');
+  $('summary-counts').textContent = counts;
+  $('summary-counts').hidden = !counts;
 }
 
 function updateTimers() {
