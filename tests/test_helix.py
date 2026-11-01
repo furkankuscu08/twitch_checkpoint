@@ -179,3 +179,19 @@ def test_total_deadline_includes_auth_recovery(respx_mock, tmp_path):
 
     asyncio.run(scenario())
     assert route.call_count == 1
+
+
+def test_both_subscriptions_and_threaded_400_no_fallback(respx_mock, tmp_path):
+    subscriptions = respx_mock.post(BASE + '/eventsub/subscriptions').respond(202)
+    sends = respx_mock.post(BASE + '/chat/messages').respond(400)
+    async def run():
+        async with httpx.AsyncClient() as client:
+            helix = Helix(manager(client, tmp_path), Config(), 'channel')
+            helix.broadcaster_id, helix.bot_id = '10', '20'
+            await helix.subscribe('session')
+            assert await helix.send_message('Exact answer.', reply_parent_message_id='parent') is None
+    asyncio.run(run())
+    assert {json.loads(c.request.content)['type'] for c in subscriptions.calls} == {
+        'channel.chat.message', 'channel.chat.message_delete'}
+    assert sends.call_count == 1
+    assert json.loads(sends.calls[0].request.content)['reply_parent_message_id'] == 'parent'

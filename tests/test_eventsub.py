@@ -251,3 +251,15 @@ def test_small_keepalive_delivery_jitter_does_not_force_reconnect():
             await asyncio.gather(task, return_exceptions=True)
 
     asyncio.run(scenario())
+
+
+def test_delete_has_its_own_shape_dedup_and_callback():
+    seen, deleted = [], []
+    eventsub = EventSub(Helix(), Config(), seen.append, lambda _: None,
+                        on_delete=deleted.append)
+    body = json.loads(notification())
+    body['metadata']['subscription_type'] = 'channel.chat.message_delete'
+    body['payload']['event'] = {'broadcaster_user_id': '10', 'message_id': 'deleted-id'}
+    eventsub.notification(body)
+    eventsub.notification(body)
+    assert deleted == [body['payload']['event']] and not seen
