@@ -163,3 +163,5 @@ Both projects are by the same author. Checkpoint adapts tested connection plumbi
 | Timed chat helper | Adapted from the development helper, with whole-file validation and one-attempt sends |
 
 There are no Minefield game-core dependencies. See [AGENTS.md](AGENTS.md) for development rules and [web/assets/CREDITS.md](web/assets/CREDITS.md) for original asset credits.
+
+Licensed under the [MIT License](LICENSE). Copyright 2026 furkankuscu08.
