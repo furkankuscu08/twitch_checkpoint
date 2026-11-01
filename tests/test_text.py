@@ -29,11 +29,16 @@ def test_question_classification():
         assert not is_question(text)
 
 
-@pytest.mark.parametrize("text", [
-    "Hi, what editor are you using", "@streamer what font is that",
-    "HELLO @streamer hey, how long have you been coding",
-    "@one @two poggers which editor do you use", "hahahaha why Python",
-])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hi, what editor are you using",
+        "@streamer what font is that",
+        "HELLO @streamer hey, how long have you been coding",
+        "@one @two poggers which editor do you use",
+        "hahahaha why Python",
+    ],
+)
 def test_question_detection_ignores_leading_chat_salutations(text):
     from checkpoint.core.text import is_question
 

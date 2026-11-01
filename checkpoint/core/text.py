@@ -21,6 +21,7 @@ GREETING_REACTIONS = frozenset(
 LAUGHTER = re.compile(r"(?:ha)+")
 MENTION = re.compile(r"(?<!\w)@[a-z0-9_]+")
 WORD = re.compile(r"[^\W_]+(?:['’][^\W_]+)*", re.UNICODE)
+CHAT_TOKEN = re.compile(r"@[a-z0-9_]+|" + WORD.pattern, re.UNICODE)
 URL = re.compile(r"\b[a-z][a-z0-9+.-]*://|\bwww\.|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b")
 
 
@@ -34,6 +35,16 @@ def words(text):
 
 def is_greeting_reaction(word):
     return word in GREETING_REACTIONS or LAUGHTER.fullmatch(word) is not None
+
+
+def strip_chat_prefix(text):
+    """Matching/classification only: keep all words after the chat salutation."""
+    text = normalize(text)
+    for token in CHAT_TOKEN.finditer(text):
+        value = token.group()
+        if not value.startswith("@") and not is_greeting_reaction(value):
+            return text[token.start() :]
+    return ""
 
 
 def is_noise(fragments):
@@ -79,7 +90,7 @@ def has_url(text):
 
 
 def is_question(text):
-    tokens = words(text)
+    tokens = words(strip_chat_prefix(text))
     return normalize(text).rstrip().endswith("?") or bool(
         tokens and tokens[0] in QUESTION_WORDS
     )

@@ -3,18 +3,48 @@ import pytest
 
 @pytest.mark.parametrize(
     "text,keep",
-    [(text, False) for text in (
-        "hi", "hello chat", "hi everyone", "lol", "hahaha", "gg wp", "o7",
-        "good morning", "thanks", "what?", "@streamer hi", "HI!!!", "ha",
-        "hahahahahahaha", "hello @streamer hi", "Hi?",
-    )] + [(text, True) for text in (
-        "love your chat", "this is so cool", "hello from brazil", "nice music",
-        "first time here", "good luck with the hackathon",
-        "Hi, what editor are you using", "what editor is that?",
-        "how long did it take to build this tool?", "where do you live?",
-        "you should stream on weekends too", "which editor do you use?",
-        "hacker", "hahaha music", "hi KEKW", "hello 42",
-    )],
+    [
+        (text, False)
+        for text in (
+            "hi",
+            "hello chat",
+            "hi everyone",
+            "lol",
+            "hahaha",
+            "gg wp",
+            "o7",
+            "good morning",
+            "thanks",
+            "what?",
+            "@streamer hi",
+            "HI!!!",
+            "ha",
+            "hahahahahahaha",
+            "hello @streamer hi",
+            "Hi?",
+        )
+    ]
+    + [
+        (text, True)
+        for text in (
+            "love your chat",
+            "this is so cool",
+            "hello from brazil",
+            "nice music",
+            "first time here",
+            "good luck with the hackathon",
+            "Hi, what editor are you using",
+            "what editor is that?",
+            "how long did it take to build this tool?",
+            "where do you live?",
+            "you should stream on weekends too",
+            "which editor do you use?",
+            "hacker",
+            "hahaha music",
+            "hi KEKW",
+            "hello 42",
+        )
+    ],
 )
 def test_deliberately_narrow_noise_keep_drop_table(new_core, chat_event, text, keep):
     core = new_core()

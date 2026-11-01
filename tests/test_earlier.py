@@ -3,9 +3,7 @@ from dataclasses import replace
 from checkpoint.core.config import Config
 
 
-def test_greeting_question_is_ordered_first_and_gets_earlier_chip(
-    new_core, chat_event
-):
+def test_greeting_question_is_ordered_first_and_gets_earlier_chip(new_core, chat_event):
     from checkpoint.core.earlier import AnsweredPair
 
     core = new_core()
@@ -18,7 +16,10 @@ def test_greeting_question_is_ordered_first_and_gets_earlier_chip(
     assert core.queue.get("question").kind == "question"
     assert core.match_earlier("question", now=3) == pair
     intent = core.send_earlier("question", now=3)
-    assert intent.text == '📌 answered earlier on stream (0 min ago): "Visual Studio Code."'
+    assert (
+        intent.text
+        == '📌 answered earlier on stream (0 min ago): "Visual Studio Code."'
+    )
     assert intent.reply_parent_message_id == "question"
 
 

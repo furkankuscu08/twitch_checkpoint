@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from .config import MATCH_MIN_SHARED_WORDS
-from .text import content_words
+from .text import content_words, strip_chat_prefix
 
 
 @dataclass(frozen=True)
@@ -28,10 +28,10 @@ class AnsweredHistory:
         del self._pairs[: -self.config.ANSWERED_MAX]
 
     def match(self, question):
-        query = content_words(question)
+        query = content_words(strip_chat_prefix(question))
         best, rank = None, (-1, float("-inf"))
         for pair in self._pairs:
-            previous = content_words(pair.question)
+            previous = content_words(strip_chat_prefix(pair.question))
             if not query or not previous:
                 continue
             shared = len(query & previous)
