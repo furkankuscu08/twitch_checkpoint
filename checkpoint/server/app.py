@@ -89,5 +89,6 @@ def create_app(*, config=None):
         LOG.debug("STT abort %s", body.model_dump())
         return {"ok": True}
 
+    app.mount("/assets", StaticFiles(directory=ROOT / "web/assets"), name="assets")
     app.mount("/mic", StaticFiles(directory=ROOT / "web/mic"), name="mic")
     return app

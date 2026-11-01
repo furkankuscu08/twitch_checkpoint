@@ -1,0 +1,24 @@
+/* Original Checkpoint tokens, extracted from the microphone page. */
+:root {
+  --cp-accent: #69e3ca;
+  --cp-accent-muted: #92bdb5;
+  --cp-background: #111419;
+  --cp-surface: #1b2027;
+  --cp-surface-raised: #252c35;
+  --cp-text: #f2f3ee;
+  --cp-muted: #a7afb9;
+  --cp-border: #30363e;
+  --cp-border-strong: #46505d;
+  --cp-on-accent: #082d29;
+  --cp-error: #f0a4a4;
+  --cp-font: Arial, Helvetica, sans-serif;
+  --cp-space-1: 4px;
+  --cp-space-2: 8px;
+  --cp-space-3: 12px;
+  --cp-space-4: 16px;
+  --cp-space-5: 24px;
+  --cp-space-6: 32px;
+  --cp-radius-sm: 7px;
+  --cp-radius: 14px;
+  --cp-diamond: "◆";
+}

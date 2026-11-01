@@ -172,12 +172,16 @@ WebSocket `/ws/overlay` and `/ws/dock`, JSON with `type`:
 | `answer` | `id, echo_text, final_text, partial_text, grace_until` | ✓ | ✓ |
 | `card_close` | `id, result: answered/skipped/removed` | ✓ | ✓ |
 | `reply_pending` | `id, kind: quote/plain, text, send_at` | — | ✓ |
-| `reply_sent` | `id, kind, is_sent` | ✓ (small tick on the badge) | ✓ |
+| `reply_sent` | `id, kind, is_sent, user_name` | ✓ (small tick on the badge) | ✓ |
 | `earlier_sent` | `id, user_name, ago_min` | ✓ (toast) | ✓ |
 | `summary` | `answered, earlier, skipped` | ✓ | ✓ |
 | `status` | `mic, engine, deepgram, eventsub` | — | ✓ |
 
-- **What the overlay shows:** crystals only (colour and name). Message text is shown on stream only on the open card.
+- **What the overlay shows:** crystals only (colour and name). Message text is shown only on the open card, with the short answered-card exit described in §8.
+- **Frozen UI contract:** snapshot `card` is null or the `card_open` fields (without `type`) combined with the current `answer` fields. Overlay `pending` is always `[]`; overlay queue rows have no text. Dock queue rows add `text` and `earlier: null | {quote, ago_min}`; `queued` has the same audience-specific row fields. Dock pending rows and `reply_pending` add `message_id` and `user_name` to `id, kind, text, send_at`. Snapshot `stats` is `{server_now, answer_grace_s, cancel_window_s, summary_s, summary, summary_until}`, where summary is null or `{answered, earlier, skipped}`. Dock snapshots also contain `status: {mic, engine, deepgram, eventsub}`, each `connected` or `disconnected`.
+- **State refresh:** replacement snapshots update focus, cancellation, summary expiry and changed earlier matches/ages, without replaying animations. `reply_sent.user_name` supports a text-free thread confirmation. Earlier clicks remove the queue row immediately; only a successful send emits `earlier_sent` and increments the counter.
+- **Debug delivery:** injected message IDs retain their debug origin, including earlier replies. Production records delivery metadata without calling Helix, reports `is_sent: false`, and does not increment the successful-earlier count. Tests may inject a recorder to inspect intents; suppression has its own test.
+- **Local demos:** overlay and dock work with `?demo=1&step=N` without a server, WebSocket or POST. Omitting step runs a timed demo. Both expose `window.checkpointReady` and `window.checkpointDemoStepCount` to screenshot tooling.
 - **Snapshots:** every client gets one when it connects. It restores the current state without replaying animations.
 - **Client limits:** each client has a queue of at most 100 messages; a full queue drops only that client.
 - **Bad input:** malformed input is rejected at the boundary and never crashes the server.
@@ -244,7 +248,7 @@ logged at DEBUG without retaining transcripts; WP1 and WP3 extend this base.
 The copied blind-plant helper and its tests are deferred to WP6; screenshot
 tooling is deferred to WP4.
 
-**Order:** WP2 → WP1 → WP3 → WP4 + WP5 (a side thread can take WP4) → WP6 → WP7.
+**Order:** WP2 → WP1 → WP3 in the main thread, with WP4, WP5 and the WP6 chat script in isolated subagent worktrees after the shared contract is frozen → remaining WP6 → WP7.
 
 ---
 
@@ -253,7 +257,8 @@ tooling is deferred to WP4.
 **Overlay (1920×1080)**
 
 - **Placement:** the code fills the centre and left of the stream, and the webcam usually sits in the lower right. So everything is anchored to the lower-right corner, beside the webcam, and the code stays readable. Answering without leaving the work is the point.
-- **Visual language:** a save point in a game, not alerts.
+- **Visual language:** a save point in a game, not alerts. Overlay, dock and mic use the main-owned `web/assets/theme.css`: microphone-derived teal accent, diamond mark, dark surfaces, system fonts, spacing and radii. Subagents propose token changes rather than introducing separate palettes.
+- **Answered-card exit:** keep its question and answer visible through the ✓ stamp and shrink for less than one second total, then replace them with a text-free pill for the fly-out. This is a bounded exit of the same card, not a second text surface. Skipped and moderator-removed cards clear their text immediately. A moderation removal also clears an answered exit still in progress.
 
 ```
 Idle: nothing.
