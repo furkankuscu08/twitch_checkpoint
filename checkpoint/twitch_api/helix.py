@@ -65,23 +65,28 @@ class Helix:
     async def subscribe(self, session_id):
         # Verified 2026-11-01: channel.chat.message v1, user:read:chat token.
         # https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage
-        response = await self.request(
-            "POST",
-            "/eventsub/subscriptions",
-            json={
-                "type": "channel.chat.message",
-                "version": "1",
-                "condition": {
-                    "broadcaster_user_id": self.broadcaster_id,
-                    "user_id": self.bot_id,
+        # Verified 2026-11-01: both v1 conditions use broadcaster and bot IDs.
+        # https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage_delete
+        for kind in ("channel.chat.message", "channel.chat.message_delete"):
+            response = await self.request(
+                "POST",
+                "/eventsub/subscriptions",
+                json={
+                    "type": kind,
+                    "version": "1",
+                    "condition": {
+                        "broadcaster_user_id": self.broadcaster_id,
+                        "user_id": self.bot_id,
+                    },
+                    "transport": {"method": "websocket", "session_id": session_id},
                 },
-                "transport": {"method": "websocket", "session_id": session_id},
-            },
-        )
-        if response.status_code != 202:
-            raise AuthError("Twitch subscription failed.")
+            )
+            if response.status_code != 202:
+                raise AuthError("Twitch subscription failed.")
 
-    async def send_message(self, message, account="bot"):
+    async def send_message(
+        self, message, account="bot", *, reply_parent_message_id=None
+    ):
         # Verified 2026-11-01: max 500 chars, sender matches the user token;
         # user:write:chat. No for_source_only with user tokens.
         # https://dev.twitch.tv/docs/api/reference/#send-chat-message
@@ -98,6 +103,11 @@ class Helix:
                         "broadcaster_id": self.broadcaster_id,
                         "sender_id": record["user_id"],
                         "message": message,
+                        **(
+                            {"reply_parent_message_id": reply_parent_message_id}
+                            if reply_parent_message_id is not None
+                            else {}
+                        ),
                     },
                 )
                 if response.status_code != 200:
@@ -120,6 +130,7 @@ class Helix:
         except (
             AuthError,
             httpx.HTTPError,
+            OSError,
             TimeoutError,
             ValueError,
             KeyError,

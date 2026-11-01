@@ -1,4 +1,4 @@
-"""One EventSub chat subscription with bounded deduplication and recovery."""
+"""Chat and deletion notifications with bounded deduplication and recovery."""
 
 import asyncio
 import json
@@ -16,9 +16,19 @@ LOG = logging.getLogger(__name__)
 
 
 class EventSub:
-    def __init__(self, helix, config, on_chat, on_health, connect=websockets.connect):
+    def __init__(
+        self,
+        helix,
+        config,
+        on_chat,
+        on_health,
+        connect=websockets.connect,
+        *,
+        on_delete=None,
+    ):
         self.helix = helix
         self.config = config
+        self.on_delete = on_delete
         self.on_chat = on_chat
         self.on_health = on_health
         self.connect = connect
@@ -30,7 +40,8 @@ class EventSub:
             meta = data["metadata"]
             if (
                 meta["message_type"] != "notification"
-                or meta["subscription_type"] != "channel.chat.message"
+                or meta["subscription_type"]
+                not in {"channel.chat.message", "channel.chat.message_delete"}
                 or meta["subscription_version"] != "1"
             ):
                 return
@@ -43,23 +54,28 @@ class EventSub:
                 or event["broadcaster_user_id"] != self.helix.broadcaster_id
             ):
                 return
-            if not all(
-                isinstance(event[key], str) and event[key]
-                for key in ("chatter_user_id", "chatter_user_login", "message_id")
-            ):
+            # Verified 2026-11-01: deletion has its own event shape, no message.
+            # https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage_delete
+            is_delete = meta["subscription_type"] == "channel.chat.message_delete"
+            if not isinstance(event.get("message_id"), str) or not event["message_id"]:
                 return
-            if not isinstance(event["message"]["text"], str):
-                return
-            if not isinstance(event["badges"], list) or not all(
-                isinstance(badge, dict) and isinstance(badge.get("set_id"), str)
-                for badge in event["badges"]
-            ):
-                return
+            if not is_delete:
+                if not all(
+                    isinstance(event.get(key), str) and event[key]
+                    for key in ("chatter_user_id", "chatter_user_login")
+                ):
+                    return
+                if not isinstance(event["message"]["text"], str):
+                    return
             self.seen[delivery] = None
             if len(self.seen) > self.config.TWITCH_DEDUP_SIZE:
                 self.seen.popitem(last=False)
-            self.on_chat(event)
-        except (KeyError, TypeError):
+            if is_delete:
+                if self.on_delete is not None:
+                    self.on_delete(event)
+            else:
+                self.on_chat(event)
+        except (KeyError, TypeError, AttributeError):
             return
 
     async def close(self, socket):
