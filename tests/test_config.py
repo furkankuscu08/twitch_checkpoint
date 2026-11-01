@@ -17,18 +17,24 @@ def test_defaults_and_entrypoint_overrides():
     )
     assert (overridden.APP_PORT, overridden.ENGINE_AUDIO_PORT) == (18200, 18766)
     assert overridden.STT_HEARTBEAT_S == 0.5
-    assert config_from_env({"APP_PORT": "8100", "ENGINE_AUDIO_PORT": "8765"}) == config
-    assert not hasattr(config, "APP_PORT") and not hasattr(config, "STT_BACKEND")
+    assert config_from_env({"GAME_PORT": "8100", "STT_MIC_PORT": "8765"}) == config
+    assert not hasattr(config, "GAME_PORT") and not hasattr(config, "STT_BACKEND")
 
 
 @pytest.mark.parametrize(
     "changes",
     [
-        {"APP_PORT": 0}, {"APP_PORT": 65536}, {"ENGINE_AUDIO_PORT": True},
-        {"ENGINE_AUDIO_PORT": 1.5}, {"DEEPGRAM_REGION": "other"},
-        {"STT_AUDIO_QUEUE_SIZE": 0}, {"STT_AUDIO_QUEUE_SIZE": 1.5},
-        {"STT_HTTP_TIMEOUT_S": 0}, {"ENGINE_TIMEOUT_S": -1},
-        {"CHAT_SEND_TIMEOUT_S": math.nan}, {"STT_HEARTBEAT_S": math.inf},
+        {"APP_PORT": 0},
+        {"APP_PORT": 65536},
+        {"ENGINE_AUDIO_PORT": True},
+        {"ENGINE_AUDIO_PORT": 1.5},
+        {"DEEPGRAM_REGION": "other"},
+        {"STT_AUDIO_QUEUE_SIZE": 0},
+        {"STT_AUDIO_QUEUE_SIZE": 1.5},
+        {"STT_HTTP_TIMEOUT_S": 0},
+        {"ENGINE_TIMEOUT_S": -1},
+        {"CHAT_SEND_TIMEOUT_S": math.nan},
+        {"STT_HEARTBEAT_S": math.inf},
         {"TWITCH_IO_TIMEOUT_S": False},
         {"STT_RECONNECT_MIN_S": 9, "STT_RECONNECT_MAX_S": 8},
         {"TWITCH_RECONNECT_MIN_S": 9, "TWITCH_RECONNECT_MAX_S": 8},

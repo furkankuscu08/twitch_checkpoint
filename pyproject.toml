@@ -1,7 +1,7 @@
 [project]
-name = "minefield"
+name = "checkpoint"
 version = "0.1.0"
-description = "A Twitch game where viewers plant secret words."
+description = "Answer Twitch chat out loud with the streamer's own words."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.162.0",
@@ -17,7 +17,6 @@ dev = [
     "pytest>=8",
     "respx>=0.22",
     "ruff>=0.9",
-    "wordfreq>=3.1",
 ]
 
 [tool.pytest.ini_options]
@@ -33,7 +32,11 @@ filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecate
 
 [tool.ruff]
 target-version = "py312"
-extend-exclude = ["twitch"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+# Unported WP6 references retain their original imports until that work package.
+[tool.ruff.lint.per-file-ignores]
+"scripts/blind_plant.py" = ["I001"]
+"tests/test_blind_plant.py" = ["I001"]

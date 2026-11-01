@@ -237,6 +237,12 @@ Each WP is done when its acceptance criteria pass and `uv run pytest` and `uv ru
 | WP6 | **Live checks and ops:** `live` test, `scripts/chat_script.py`, `scripts/run_all.sh` (+ `--demo`), README with the "Relation to Minefield" table | A `live` test as the test account sends a question; the checkpoint answers it with typed text, and the bot's reply is threaded under that message (`is_sent: true`). `chat_script.py FILE` sends a timed list of `{account, delay_s, text}` from the test accounts, one attempt each, and prints only success or failure. `run_all.sh --demo` runs without any key, and the README's no-key path works from a fresh clone. |
 | WP7 | **Polish and rehearsal fixes** | Two uninterrupted checkpoints on the real mic, with 5+ messages each from `chat_script.py`. Check the saved hypotheses for cut-off answers, and tune `ANSWER_GRACE_S` and `ATTRIB_SLACK_S` if needed. |
 
+WP2 includes the minimal pure plumbing config and local server needed for `/mic`
+and validated `/stt/hypothesis`, `/stt/status` and `/stt/abort` intake. Intake is
+logged at DEBUG without retaining transcripts; WP1 and WP3 extend this base.
+The copied blind-plant helper and its tests are deferred to WP6; screenshot
+tooling is deferred to WP4.
+
 **Order:** WP2 → WP1 → WP3 → WP4 + WP5 (a side thread can take WP4) → WP6 → WP7.
 
 ---
