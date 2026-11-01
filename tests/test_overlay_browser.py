@@ -90,6 +90,30 @@ def answer(message_id="m1", **changes):
     )
 
 
+@pytest.mark.parametrize(
+    "counts,expected",
+    [
+        ((3, 0, 1), "3 answered · 1 skipped"),
+        ((0, 2, 0), "2 from earlier"),
+        ((0, 0, 1), "1 skipped"),
+        ((0, 0, 0), ""),
+    ],
+)
+def test_summary_hides_zero_counts_on_events_and_snapshots(overlay, counts, expected):
+    from playwright.sync_api import expect
+
+    page, _ = overlay
+    summary = dict(zip(("answered", "earlier", "skipped"), counts, strict=True))
+    emit(page, snapshot())
+    emit(page, dict(type="summary", **summary))
+    expect(page.locator("#summary-counts")).to_have_text(expected)
+    expect(page.locator("#summary")).to_contain_text("CHECKPOINT SAVED ✓")
+    state = snapshot()
+    state["stats"].update(summary=summary, summary_until=1005)
+    emit(page, state)
+    expect(page.locator("#summary-counts")).to_have_text(expected)
+
+
 def test_text_only_appears_in_open_card_and_is_never_html(overlay):
     from playwright.sync_api import expect
 

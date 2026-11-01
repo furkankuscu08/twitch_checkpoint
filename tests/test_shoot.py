@@ -1,4 +1,22 @@
+import pytest
+
 from scripts import shoot
+
+
+def test_capture_rejects_visible_zero_summary_before_saving():
+    class Page:
+        def evaluate(self, expression):
+            if expression == "document.fonts.ready":
+                return None
+            if "scrollWidth" in expression:
+                return False
+            return "CHECKPOINT SAVED ✓ 3 answered · 0 from earlier · 1 skipped"
+
+        def screenshot(self, **kwargs):
+            pytest.fail("A zero-count summary was saved")
+
+    with pytest.raises(RuntimeError, match="zero"):
+        shoot.capture(Page(), "overlay", "unused.png")
 
 
 def test_checkpoint_capture_targets_and_default_port(monkeypatch):

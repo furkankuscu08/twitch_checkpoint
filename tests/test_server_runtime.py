@@ -316,6 +316,46 @@ def test_entrypoint_loads_blocklist_and_config_outside_core(monkeypatch):
     assert runtime.core.queue.excluded == {"checkpoint_bott", "izleyici0808"}
 
 
+def test_demo_entrypoint_bypasses_twitch_even_with_dotenv_credentials(
+    monkeypatch, tmp_path
+):
+    from checkpoint.server import __main__ as entrypoint
+
+    # Test-owned dotenv only. Never read the workspace credential file.
+    (tmp_path / ".env").write_text(
+        "TWITCH_CLIENT_ID=credential-shaped-placeholder\n"
+        "TWITCH_BOT_LOGIN=checkpoint_bott\n"
+        "TWITCH_BROADCASTER_LOGIN=izleyici0808\n"
+        "DEEPGRAM_API_KEY=placeholder\n"
+    )
+    for name in (
+        "TWITCH_CLIENT_ID",
+        "TWITCH_BOT_LOGIN",
+        "TWITCH_BROADCASTER_LOGIN",
+        "DEEPGRAM_API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("CHECKPOINT_DEBUG", "0")
+    original_load = entrypoint.load_dotenv
+    monkeypatch.setattr(
+        entrypoint, "load_dotenv", lambda *_: original_load(tmp_path / ".env")
+    )
+    monkeypatch.setattr(
+        entrypoint, "factory", lambda *_: pytest.fail("Demo initialized Twitch")
+    )
+    captured = []
+    monkeypatch.setattr(
+        entrypoint.uvicorn, "run", lambda app, **_: captured.append(app)
+    )
+    entrypoint.main(["--demo"])
+    with TestClient(captured[0]) as client:
+        client.post("/dock/focus", json={"on": True})
+        response = client.post(
+            "/dock/debug/chat", json={"user": "alex", "text": "What editor is that?"}
+        )
+        assert response.status_code == 200 and response.json()["queued"]
+
+
 @pytest.mark.parametrize("action", ["checkpoint", "next", "skip", "clear"])
 def test_bodyless_actions_reject_malformed_or_unexpected_input(action):
     with TestClient(create_app()) as client:

@@ -110,6 +110,29 @@ def emit(page, event):
     page.evaluate("event => window.sockets.at(-1).emit(event)", event)
 
 
+@pytest.mark.parametrize(
+    "counts,expected",
+    [
+        ((3, 0, 1), "3 answered · 1 skipped"),
+        ((0, 2, 0), "2 from earlier"),
+        ((0, 0, 1), "1 skipped"),
+        ((0, 0, 0), ""),
+    ],
+)
+def test_summary_hides_zero_counts_on_events_and_snapshots(counts, expected):
+    from playwright.sync_api import expect
+
+    summary = dict(zip(("answered", "earlier", "skipped"), counts, strict=True))
+    with dock() as (page, _, _):
+        emit(page, snapshot())
+        emit(page, dict(type="summary", **summary))
+        expect(page.locator("#summary")).to_have_text("CHECKPOINT SAVED ✓" + expected)
+        state = snapshot()
+        state["stats"].update(summary=summary, summary_until=1005)
+        emit(page, state)
+        expect(page.locator("#summary")).to_have_text("CHECKPOINT SAVED ✓" + expected)
+
+
 def test_demo_steps_are_offline_and_fit_400px():
     with dock(demo=0) as (page, calls, base):
         count = page.evaluate("window.checkpointDemoStepCount")

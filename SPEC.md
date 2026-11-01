@@ -52,6 +52,7 @@ checkpoint/
   server/      FastAPI app, WebSocket hub, dock/overlay/mic routes, Twitch glue
   twitch_api/  (from Minefield) auth, EventSub client, Helix calls
 scripts/run_all.sh     server + engine in one command; --demo runs without keys
+                      normal mode forwards extra arguments to the engine, e.g. --save-hyps data/rehearsal.jsonl
 scripts/chat_script.py dev only: sends a timed list of chat messages from the test accounts
 scripts/shoot.py       dev only: headless screenshots of overlay and dock
 web/overlay/  web/dock/  web/mic/  web/assets/   plain HTML/CSS/JS, no build step
@@ -155,6 +156,11 @@ Only a quote reply whose `CANCEL_WINDOW_S` has passed becomes an **answered pair
 ### Summary
 When the last card of a checkpoint closes, the overlay shows **CHECKPOINT SAVED ✓** with "N answered · N from earlier · N skipped" for `SUMMARY_S` (5 s). Answered and skipped count cards in this checkpoint; moderation removals are not skips, and replacing a quote with a receipt does not undo an answered card. From earlier counts successful earlier-answer sends since the previous checkpoint summary, including sends while collecting before Checkpoint was pressed. Reset that counter whenever a summary is emitted. Clear ends an active checkpoint with its current counts and a summary, without answering any remaining card.
 
+Overlay and dock hide zero counts and join only positive counts with ` · `, in
+answered / from earlier / skipped order. For example: `3 answered · 1 skipped`.
+If every count is zero, show only **CHECKPOINT SAVED ✓**, with no empty count line.
+The numeric summary payload and counter/reset semantics are unchanged.
+
 ---
 
 ## 4. Messages and endpoints
@@ -249,10 +255,20 @@ Each WP is done when its acceptance criteria pass and `uv run pytest` and `uv ru
 | WP6 | **Live checks and ops:** `live` test, `scripts/chat_script.py`, `scripts/run_all.sh` (+ `--demo`), README with the "Relation to Minefield" table | A `live` test as the test account sends a question; the checkpoint answers it with typed text, and the bot's reply is threaded under that message (`is_sent: true`). `chat_script.py FILE` validates the complete JSON list of `{account, delay_s, text}` before network activity, waits each delay after the preceding attempt completes, sends from test/test2/test3 with one attempt each, and prints only success or failure per entry. `run_all.sh --demo` runs without any key, and the README's no-key path works from a fresh clone. |
 | WP7 | **Polish and rehearsal fixes** | Two uninterrupted checkpoints on the real mic, with 5+ messages each from `chat_script.py`. Check the saved hypotheses for cut-off answers, and tune `ANSWER_GRACE_S` and `ATTRIB_SLACK_S` if needed. |
 
+WP6 launcher acceptance: `scripts/run_all.sh --demo` runs
+`python -m checkpoint.server --demo`, which explicitly enables debug intake and
+disables Twitch even if `.env` contains credentials. It starts no engine and,
+after readiness, seeds three neutral sample questions through the existing
+`/dock/debug/chat` endpoint. Normal mode forwards extra CLI arguments to the
+engine, including `--save-hyps`. Linux/WSL only. Exit must stop and reap owned
+processes and release ports; startup refuses occupied required ports.
+
 WP1 filter acceptance also includes the deliberately narrow noise keep/drop table,
 with emote/mention fragments excluded and any unlisted content word preserved.
 Question-order and earlier-match tests include greeting/mention prefixes and the
 pair "Hi, what editor are you using" / "what editor is that?".
+Summary acceptance includes browser event/snapshot tests for hidden zero counts
+on both pages, plus demo screenshots with zero-earlier and all-zero summaries.
 
 WP2 includes the minimal pure plumbing config and local server needed for `/mic`
 and validated `/stt/hypothesis`, `/stt/status` and `/stt/abort` intake. Intake is
@@ -289,6 +305,8 @@ Checkpoint card (crystals fly from the badge into the card):
    → the badge shows "↗ in @ana's thread" when reply_sent arrives.
 Earlier toast (3 s, beside the badge): [📌 @mehmet ← your answer from 12 min ago]
 Summary (5 s): ┌ CHECKPOINT SAVED ✓  4 answered · 1 from earlier · 1 skipped ┐
+Zero earlier:  ┌ CHECKPOINT SAVED ✓  3 answered · 1 skipped ┐
+All zero:      ┌ CHECKPOINT SAVED ✓ ┐
 ```
 
 - **Words:** they fade in one by one with a caret, and only the last 3 lines are visible.
