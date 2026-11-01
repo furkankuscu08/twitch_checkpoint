@@ -106,6 +106,59 @@ def test_urls_have_required_options_and_no_biasing():
     )
 
 
+@pytest.mark.parametrize("status", [401, 403])
+def test_provider_auth_failure_keeps_engine_heartbeat_and_dock_alive(status):
+    import httpx
+    import websockets
+    from websockets.datastructures import Headers
+    from websockets.http11 import Response
+
+    from checkpoint.server.app import create_app
+
+    async def scenario():
+        attempts = []
+
+        class Rejected:
+            async def __aenter__(self):
+                attempts.append(status)
+                raise websockets.InvalidStatus(Response(status, "Rejected", Headers()))
+
+            async def __aexit__(self, *_):
+                pass
+
+        config = replace(
+            Config(), STT_RECONNECT_MIN_S=0.01, STT_RECONNECT_MAX_S=0.02,
+            STT_HEARTBEAT_S=0.01,
+        )
+        app = create_app(debug=True, config=config)
+        async with app.router.lifespan_context(app):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app)) as http:
+                engine = Engine("fake", config, http, connector=lambda *a, **k: Rejected())
+                engine.audio.start(1000)
+                running = asyncio.create_task(engine.run())
+                try:
+                    await asyncio.sleep(0.05)
+                    assert not running.done(), "Provider auth failure stopped the engine"
+                    assert len(attempts) >= 2
+                    assert app.state.runtime.status["engine"] == "connected"
+                    assert app.state.runtime.status["deepgram"] == "disconnected"
+                    base = "http://127.0.0.1"
+                    assert (await http.post(base + "/dock/focus", json={"on": True})).is_success
+                    assert (await http.post(base + "/dock/debug/chat", json={
+                        "user": "river", "text": "How do you keep focused?"
+                    })).json()["queued"]
+                    assert (await http.post(base + "/dock/checkpoint")).is_success
+                    assert (await http.post(base + "/dock/typed", json={
+                        "text": "I keep one task open."
+                    })).is_success
+                    assert len(app.state.runtime.core.pending) == 1
+                finally:
+                    running.cancel()
+                    await asyncio.gather(running, return_exceptions=True)
+
+    asyncio.run(scenario())
+
+
 def test_audio_aggregation_overflow_and_interrupt_reanchor():
     audio = AudioInput(Config())
     audio.start(1000)
