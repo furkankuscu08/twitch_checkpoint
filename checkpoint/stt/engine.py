@@ -11,7 +11,7 @@ from collections import deque
 import httpx
 import websockets
 
-from .audio import FRAME_BYTES, AudioInput, wav_chunks
+from .audio import FRAME_BYTES, MIC_END, AudioInput, wav_chunks
 from .backends import Mapper, connection_url, number
 
 LOG = logging.getLogger(__name__)
@@ -49,6 +49,9 @@ class Engine:
         self.mic_socket = None
         self.closing = False
         self.turn_finished = asyncio.Event()
+        self.session_finished = asyncio.Event()
+        self.session_finished.set()
+        self.mic_lock = asyncio.Lock()
         self.lags = deque(maxlen=config.STT_LAG_WINDOW)
 
     def status(self):
@@ -110,6 +113,8 @@ class Engine:
             except TimeoutError:
                 continue
             if self.audio.generation != generation:
+                raise SourceChanged
+            if item is MIC_END:
                 raise SourceChanged
             if item is None:
                 self.closing = True
@@ -209,6 +214,7 @@ class Engine:
             if not self.audio.connected:
                 return
             self.connected = True
+            self.session_finished.clear()
             self.closing = False
             source = self.mic_socket
             self.turn_finished.clear()
@@ -233,7 +239,11 @@ class Engine:
                 elif not self.closing:
                     raise SourceChanged
             except SourceChanged:
-                if reader in done or self.mic_socket is source:
+                if (
+                    reader in done
+                    or self.mic_socket is source
+                    or self.audio.generation != generation
+                ):
                     # Broken provider/delivery or lost PCM continuity still
                     # invalidates the turn. Only a mic handoff gets a drain.
                     raise
@@ -291,6 +301,7 @@ class Engine:
                 self.connected = False
                 self.audio.reset()
                 await self._abort()
+                self.session_finished.set()
             if self.audio.eof:
                 return
             if self.audio.connected:
@@ -341,7 +352,27 @@ class Engine:
             status = dict(self.status(), ok=False)
             await self._post("status", status)
 
+    async def _stop_mic(self):
+        if not self.connected:
+            self.audio.stop()
+            return True
+        try:
+            async with asyncio.timeout(self.config.ENGINE_TIMEOUT_S):
+                if self.audio.accepting:
+                    # The sender finishes every queued chunk, then the tail,
+                    # before _session requests the provider's actual final.
+                    await self.audio.finish_mic()
+                else:
+                    self.audio.stop()
+                await self.session_finished.wait()
+            return True
+        except TimeoutError:
+            self.audio.stop()
+            LOG.warning("Mic drain timed out; discarding pending speech")
+            return False
+
     async def mic(self, socket):
+        healthy = True
         try:
             if socket.request.path != "/audio":
                 await socket.close(code=1008)
@@ -356,12 +387,17 @@ class Engine:
             ):
                 raise ValueError("Invalid mic hello")
             number(hello["client_start_wall"])
-            old = self.mic_socket
-            self.mic_socket = socket
-            self.audio.start(self.clock())
-            if old is not None:
-                LOG.info("Mic source replaced")
-                await old.close(code=1012)
+            async with self.mic_lock:
+                old = self.mic_socket
+                self.mic_socket = socket
+                if not await self._stop_mic():
+                    healthy = False
+                    await socket.close(code=1013)
+                    return
+                self.audio.start(self.clock())
+                if old is not None:
+                    LOG.info("Mic source replaced")
+                    await old.close(code=1012)
             async for pcm in socket:
                 if self.mic_socket is not socket:
                     break
@@ -376,6 +412,7 @@ class Engine:
             TypeError,
             TimeoutError,
         ):
+            healthy = False
             LOG.warning("Mic protocol rejected; closing source code=1008")
             await socket.close(code=1008)
         finally:
@@ -383,6 +420,10 @@ class Engine:
             LOG.info(
                 "Mic disconnected code=%s", code if type(code) is int else "unknown"
             )
-            if self.mic_socket is socket:
-                self.mic_socket = None
-                self.audio.stop()
+            async with self.mic_lock:
+                if self.mic_socket is socket:
+                    self.mic_socket = None
+                    if healthy:
+                        await self._stop_mic()
+                    else:
+                        self.audio.stop()

@@ -121,7 +121,7 @@ def test_live_mic_source_stop_requests_final_from_flux(caplog):
                 assert not any(h["final"] for h in hypotheses())
                 original_id = hypotheses()[0]["utt_id"]
                 engine.mic_socket = None
-                engine.audio.stop()
+                await engine._stop_mic()
                 await until(lambda: any(h["final"] for h in hypotheses()))
                 finals = [h for h in hypotheses() if h["final"]]
                 assert len(finals) == 1

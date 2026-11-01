@@ -7,6 +7,7 @@ import wave
 SAMPLE_RATE = 16000
 FRAME_BYTES = 640  # 20 ms, mono signed little-endian int16.
 CHUNK_BYTES = 2560  # 80 ms; protocol audio format, not a tuning parameter.
+MIC_END = object()
 
 
 def wav_chunks(path):
@@ -73,6 +74,19 @@ class AudioInput:
         self.reset()
         self.connected = False
         self.available.clear()
+
+    async def finish_mic(self):
+        """Healthy end: queue captured PCM before a marker, without resetting it."""
+        self.accepting = False
+        self.connected = False
+        self.available.clear()
+        self.ready.clear()
+        if self.buffer:
+            await self.queue.put(
+                (self.anchor + self.samples / SAMPLE_RATE, bytes(self.buffer))
+            )
+            self.buffer.clear()
+        await self.queue.put(MIC_END)
 
     def feed(self, pcm, wall):
         if not isinstance(pcm, bytes) or not pcm or len(pcm) % 2:
