@@ -27,6 +27,7 @@ def overlay():
                 data: JSON.stringify(event)
             });
         """)
+        page.clock.install()
         response = page.goto(f"{base}/overlay/")
         assert response.status == 200
         page.wait_for_function("window.checkpointReady === true")
@@ -125,7 +126,6 @@ def test_answered_stamp_keeps_text_then_purges_it_in_under_one_second(overlay):
     from playwright.sync_api import expect
 
     page, _ = overlay
-    page.clock.install()
     emit(page, snapshot())
     emit(page, card())
     emit(page, answer(final_text="It's my own editor theme."))
@@ -141,7 +141,6 @@ def test_answered_stamp_keeps_text_then_purges_it_in_under_one_second(overlay):
 
 def test_moderation_purges_open_and_answered_exiting_text_immediately(overlay):
     page, _ = overlay
-    page.clock.install()
     for exiting in (False, True):
         emit(page, snapshot())
         emit(page, card())
@@ -159,7 +158,6 @@ def test_echo_partial_grace_summary_and_success_feedback(overlay):
     from playwright.sync_api import expect
 
     page, _ = overlay
-    page.clock.install()
     emit(page, snapshot())
     emit(page, card())
     emit(page, answer(echo_text="What editor and theme do you use?"))
@@ -206,7 +204,6 @@ def test_next_card_waits_for_stamp_and_snapshot_reconnect_restores_without_exit(
     from playwright.sync_api import expect
 
     page, _ = overlay
-    page.clock.install()
     emit(page, snapshot())
     emit(page, card())
     emit(page, answer(final_text="My own theme."))
