@@ -218,7 +218,9 @@ def create_app(
         client = runtime.hub.add(socket, audience, runtime.snapshot(audience))
         try:
             while True:
-                await socket.receive_text()
+                incoming = await socket.receive()
+                if incoming["type"] == "websocket.disconnect":
+                    break
         except (WebSocketDisconnect, RuntimeError):
             pass
         finally:

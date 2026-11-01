@@ -3,6 +3,7 @@
 import asyncio
 from dataclasses import dataclass, field
 
+from anyio import BrokenResourceError, ClosedResourceError
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -55,7 +56,14 @@ class Hub:
                 event = await client.queue.get()
                 async with asyncio.timeout(self.config.WS_SEND_TIMEOUT_S):
                     await client.socket.send_json(event)
-        except (OSError, TimeoutError, RuntimeError, WebSocketDisconnect):
+        except (
+            OSError,
+            TimeoutError,
+            RuntimeError,
+            WebSocketDisconnect,
+            BrokenResourceError,
+            ClosedResourceError,
+        ):
             pass
         finally:
             self.clients.discard(client)
@@ -65,7 +73,14 @@ class Hub:
         try:
             async with asyncio.timeout(self.config.WS_SEND_TIMEOUT_S):
                 await client.socket.close(code=1013)
-        except (OSError, TimeoutError, RuntimeError, WebSocketDisconnect):
+        except (
+            OSError,
+            TimeoutError,
+            RuntimeError,
+            WebSocketDisconnect,
+            BrokenResourceError,
+            ClosedResourceError,
+        ):
             pass
 
     async def close(self):

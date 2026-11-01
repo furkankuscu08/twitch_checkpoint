@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import httpx
 
+from checkpoint.core.config import SECONDS_PER_MINUTE
 from checkpoint.core.state import Checkpoint
 from checkpoint.twitch_api.auth import AuthError
 
@@ -73,7 +74,9 @@ class Runtime:
                 earlier=(
                     dict(
                         quote=match.quote,
-                        ago_min=max(0, int((now - match.answered_at) // 60)),
+                        ago_min=max(
+                            0, int((now - match.answered_at) // SECONDS_PER_MINUTE)
+                        ),
                     )
                     if match
                     else None

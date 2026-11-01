@@ -1,9 +1,11 @@
 import json
 import logging
+from dataclasses import replace
 
 import pytest
 from fastapi.testclient import TestClient
 
+from checkpoint.core.config import Config
 from checkpoint.server.app import create_app
 
 
@@ -252,3 +254,46 @@ def test_delete_after_answer_still_notifies_overlay_to_purge_exit():
         )
         client.portal.call(app.state.runtime.delete, {"message_id": message_id})
         assert ({"type": "removed", "id": message_id}, "overlay") in events
+
+
+def test_binary_browser_input_is_ignored_without_losing_subscription():
+    with TestClient(create_app()) as client, client.websocket_connect("/ws/dock") as ws:
+        ws.receive_json()
+        ws.send_bytes(b"not a browser command")
+        client.post("/dock/focus", json={"on": True})
+        assert receive(ws, "snapshot")["focus"] is True
+
+
+def test_server_tick_runs_timers_without_an_http_trigger():
+    import time
+
+    app = create_app(
+        debug=True, config=replace(Config(), CANCEL_WINDOW_S=0.03, SERVER_TICK_S=0.005)
+    )
+    with TestClient(app) as client:
+        client.post("/dock/focus", json={"on": True})
+        inject(client)
+        client.post("/dock/checkpoint")
+        client.post("/dock/typed", json={"text": "Exact timer answer."})
+        deadline = time.monotonic() + 1
+        while app.state.runtime.core.pending and time.monotonic() < deadline:
+            time.sleep(0.005)
+        assert not app.state.runtime.core.pending
+
+
+def test_entrypoint_loads_blocklist_and_config_outside_core(monkeypatch):
+    from checkpoint.server import __main__ as entrypoint
+
+    captured = []
+    monkeypatch.setattr(entrypoint, "load_dotenv", lambda *args: None)
+    monkeypatch.setenv("TWITCH_CLIENT_ID", "")
+    monkeypatch.setenv("TWITCH_BOT_LOGIN", "checkpoint_bott")
+    monkeypatch.setenv("TWITCH_BROADCASTER_LOGIN", "izleyici0808")
+    monkeypatch.setenv("CHECKPOINT_DEBUG", "1")
+    monkeypatch.setattr(
+        entrypoint.uvicorn, "run", lambda app, **kw: captured.append(app)
+    )
+    entrypoint.main([])
+    runtime = captured[0].state.runtime
+    assert "shit" in runtime.core.blocklist
+    assert runtime.core.queue.excluded == {"checkpoint_bott", "izleyici0808"}
