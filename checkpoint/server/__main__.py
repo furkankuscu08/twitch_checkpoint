@@ -29,6 +29,9 @@ def main(argv=None):
     parser.add_argument(
         "--log-level", choices=("debug", "info", "warning"), default="info"
     )
+    parser.add_argument(
+        "--demo", action="store_true", help="Debug chat and typed answers; no Twitch"
+    )
     args = parser.parse_args(argv)
     load_dotenv(ROOT / ".env")
     try:
@@ -48,8 +51,12 @@ def main(argv=None):
     }
     broadcaster = os.environ.get("TWITCH_BROADCASTER_LOGIN", "").strip().lower()
     client_id = os.environ.get("TWITCH_CLIENT_ID", "").strip()
-    twitch_factory = factory(client_id, logins, broadcaster) if client_id else None
-    if twitch_factory is None:
+    twitch_factory = (
+        factory(client_id, logins, broadcaster) if client_id and not args.demo else None
+    )
+    if args.demo:
+        logging.getLogger(__name__).info("Demo mode: Twitch disabled")
+    elif twitch_factory is None:
         logging.getLogger(__name__).warning("Twitch unavailable: Client ID missing")
     uvicorn.run(
         create_app(
@@ -57,7 +64,7 @@ def main(argv=None):
             blocklist=blocklist,
             bot_login=logins["bot"],
             broadcaster_login=broadcaster,
-            debug=os.environ.get("CHECKPOINT_DEBUG") == "1",
+            debug=args.demo or os.environ.get("CHECKPOINT_DEBUG") == "1",
             twitch_factory=twitch_factory,
         ),
         host="127.0.0.1",
