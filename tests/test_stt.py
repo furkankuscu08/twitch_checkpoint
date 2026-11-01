@@ -556,8 +556,11 @@ def test_mic_drain_after_previous_final_waits_for_delayed_provider_turn(provider
 
     async def scenario():
         posts, controls = [], []
-        finals = [r["message"] for r in recording("flux")
-                  if r["message"].get("event") == "EndOfTurn"]
+        finals = [
+            r["message"]
+            for r in recording("flux")
+            if r["message"].get("event") == "EndOfTurn"
+        ]
 
         class Socket:
             def __init__(self):
@@ -566,9 +569,14 @@ def test_mic_drain_after_previous_final_waits_for_delayed_provider_turn(provider
             async def send(self, raw):
                 if isinstance(raw, str):
                     controls.append(json.loads(raw)["type"])
-                    response = finals[1] if provider_reply == "final" else {
-                        "type": "Warning", "code": "FORCE_END_TURN_NO_ACTIVE_TURN"
-                    }
+                    response = (
+                        finals[1]
+                        if provider_reply == "final"
+                        else {
+                            "type": "Warning",
+                            "code": "FORCE_END_TURN_NO_ACTIVE_TURN",
+                        }
+                    )
                     self.incoming.put_nowait(json.dumps(response))
 
             def __aiter__(self):
@@ -594,10 +602,15 @@ def test_mic_drain_after_previous_final_waits_for_delayed_provider_turn(provider
             try:
                 await asyncio.wait_for(engine._finish_turn(socket), 0.2)
                 assert controls == ["ForceEndTurn"]
-                hypotheses = [body for path, body in posts if path.endswith("hypothesis")]
+                hypotheses = [
+                    body for path, body in posts if path.endswith("hypothesis")
+                ]
                 if provider_reply == "final":
                     assert len(hypotheses) == 1 and hypotheses[0]["final"]
-                    assert "volcano" in " ".join(w["text"] for w in hypotheses[0]["words"]).lower()
+                    assert (
+                        "volcano"
+                        in " ".join(w["text"] for w in hypotheses[0]["words"]).lower()
+                    )
                 else:
                     assert not hypotheses
             finally:

@@ -137,6 +137,14 @@ class Engine:
                 self._save(self.raw_log, {"received_wall": now, "message": message})
                 if message.get("type") == "Error":
                     raise ValueError("Deepgram reported an error")
+                # Verified 2026-11-01: forcing with no active turn yields this
+                # Warning, not an EndOfTurn. It must never become a hypothesis.
+                # https://developers.deepgram.com/docs/flux/force-end-turn
+                if (
+                    message.get("type") == "Warning"
+                    and message.get("code") == "FORCE_END_TURN_NO_ACTIVE_TURN"
+                ):
+                    self.turn_finished.set()
                 if self.mapper is None:
                     continue
                 for hypothesis in self.mapper.process(message, now):
@@ -174,8 +182,6 @@ class Engine:
     async def _finish_turn(self, socket):
         if self.mapper is None:
             return
-        if self.mapper.utt_id is None and self.turn_finished.is_set():
-            return
         self.turn_finished.clear()
         try:
             # Verified 2026-11-01: ForceEndTurn requests an actual EndOfTurn;
@@ -185,7 +191,7 @@ class Engine:
             async with asyncio.timeout(self.config.STT_HTTP_TIMEOUT_S):
                 await socket.send(json.dumps({"type": "ForceEndTurn"}))
                 await self.turn_finished.wait()
-            LOG.info("Mic source ended; final turn delivered")
+            LOG.info("Mic source drain completed")
         except (OSError, TimeoutError, websockets.WebSocketException):
             LOG.warning("Mic final turn unavailable; aborting pending speech")
 
