@@ -483,6 +483,101 @@ def test_mic_replacement_and_bad_frames_are_isolated():
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("source_change", ["stop", "replacement"])
+@pytest.mark.parametrize("frame_count", [1, 5, 17])
+def test_healthy_mic_end_drains_queued_pcm_and_subchunk_tail(
+    source_change, frame_count
+):
+    import httpx
+
+    async def scenario():
+        providers, posts = [], []
+        old_frames_sent = asyncio.Event()
+        final = next(r["message"] for r in recording("flux")
+                     if r["message"].get("event") == "EndOfTurn")
+
+        class Provider:
+            def __init__(self):
+                self.incoming = asyncio.Queue()
+                self.sent = []
+
+            async def send(self, raw):
+                self.sent.append(raw if isinstance(raw, bytes) else json.loads(raw)["type"])
+                if isinstance(raw, str) and json.loads(raw)["type"] == "ForceEndTurn":
+                    self.incoming.put_nowait(json.dumps(final))
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                return await self.incoming.get()
+
+        class Connection:
+            async def __aenter__(self):
+                provider = Provider()
+                providers.append(provider)
+                return provider
+
+            async def __aexit__(self, *_):
+                pass
+
+        class Mic:
+            request = type("Request", (), {"path": "/audio"})()
+
+            def __init__(self, frames, wait_for_replacement=False):
+                self.frames, self.wait_for_replacement = frames, wait_for_replacement
+                self.closed = asyncio.Event()
+
+            async def recv(self):
+                return json.dumps(dict(type="hello", sample_rate=16000, client_start_wall=1))
+
+            def __aiter__(self):
+                return self.messages()
+
+            async def messages(self):
+                await engine.audio.ready.wait()
+                for frame in self.frames:
+                    yield frame
+                old_frames_sent.set()
+                if self.wait_for_replacement:
+                    await self.closed.wait()
+
+            async def close(self, code):
+                self.closed.set()
+
+        def handle(request):
+            posts.append((request.url.path, json.loads(request.content)))
+            return httpx.Response(200)
+
+        config = replace(Config(), STT_RECONNECT_MIN_S=0.001,
+                         STT_RECONNECT_MAX_S=0.002, STT_HTTP_TIMEOUT_S=0.05)
+        frames = [bytes([i + 1]) * 640 for i in range(frame_count)]
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
+            engine = Engine("fake", config, http, connector=lambda *a, **k: Connection())
+            running = asyncio.create_task(engine.run())
+            mic = asyncio.create_task(engine.mic(Mic(frames, source_change == "replacement")))
+            try:
+                await asyncio.wait_for(old_frames_sent.wait(), 1)
+                if source_change == "replacement":
+                    await asyncio.wait_for(engine.mic(Mic([bytes([99]) * 640])), 1)
+                await asyncio.wait_for(mic, 1)
+                captured = b"".join(raw for raw in providers[0].sent if isinstance(raw, bytes))
+                assert captured == b"".join(frames), "Captured tail disappeared on mic end"
+                assert providers[0].sent[-2:] == ["ForceEndTurn", "CloseStream"]
+                assert all(isinstance(raw, bytes) for raw in providers[0].sent[:-2])
+                finals = [body for path, body in posts
+                          if path.endswith("hypothesis") and body["final"]]
+                assert len(finals) == (2 if source_change == "replacement" else 1)
+                assert len({h["utt_id"] for h in finals}) == len(finals)
+                assert not any(path.endswith("abort") for path, _ in posts)
+            finally:
+                mic.cancel()
+                running.cancel()
+                await asyncio.gather(mic, running, return_exceptions=True)
+
+    asyncio.run(scenario())
+
+
 def test_audio_gap_invalidates_session_without_buffering_backlog():
     import time
 
