@@ -126,7 +126,12 @@ def test_real_question_gets_exact_quote_in_its_twitch_thread():
                     reply = next(
                         e for e in observed_replies if e["message_id"] == reply_id
                     )
-                    assert reply["message"]["text"] == EXPECTED_REPLY
+                    # Verified 2026-11-01 in docs and live: Twitch prepends the
+                    # parent mention. The submitted quote above stays exact.
+                    # https://dev.twitch.tv/docs/chat/irc-migration/#replying-to-a-chat-message
+                    assert reply["message"]["text"] == (
+                        f"@{logins['test2']} {EXPECTED_REPLY}"
+                    )
                     assert reply["reply"]["parent_message_id"] == parent
                     print(
                         "Threaded reply confirmed from checkpoint_bott to pixelmoth01."

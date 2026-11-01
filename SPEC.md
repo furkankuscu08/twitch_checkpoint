@@ -240,6 +240,10 @@ Verify every endpoint, scope and payload against https://dev.twitch.tv/docs befo
   - `channel.chat.message` v1. Fields used: `message_id`, `chatter_user_login`, `chatter_user_name`, `color` (may be empty), `message.text`, `message.fragments[].type`, `message_type` and `reply.parent_user_login`.
   - `channel.chat.message_delete` v1.
 - **Send Chat Message:** `POST /helix/chat/messages` as the bot, with `reply_parent_message_id` (optional field; an invalid parent returns 400). The limit is 500 characters. Emote names in the text become emotes. Log `is_sent` and `drop_reason`.
+- Twitch adds the parent @mention to the received reply text. The bot submits
+  only the specified reply body; the live test checks that exact body before
+  sending and the exact body plus Twitch's mention in EventSub. Verified
+  1 Nov 2026: https://dev.twitch.tv/docs/chat/irc-migration/.
 - **Not used:** clips, markers, polls, pins, whispers, Extensions.
 
 ---
