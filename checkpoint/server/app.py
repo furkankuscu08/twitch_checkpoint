@@ -209,6 +209,13 @@ def create_app(
             accepted = runtime.collect(event, debug=True)
             return {"ok": True, "id": message_id, "queued": accepted}
 
+    else:
+
+        @app.post("/dock/debug/chat")
+        async def debug_disabled():
+            # Do not let the dock StaticFiles mount turn this into a 405.
+            raise HTTPException(404, "Not found")
+
     @app.websocket("/ws/{audience}")
     async def websocket(socket: WebSocket, audience: str):
         if audience not in ("overlay", "dock"):
