@@ -20,10 +20,10 @@ body {background:var(--cp-background);color:var(--cp-text);font-family:var(--cp-
 .code b {color:var(--cp-accent-muted);font-weight:normal}.code .line {color:var(--cp-border-strong);display:inline-block;width:65px}
 .editor iframe {position:absolute;left:0;top:0;width:1920px;height:890px;border:0;transform:scale(.9166667);transform-origin:top left}
 .dock-copy {position:absolute;left:112px;top:415px;width:770px}.dock-copy h2 {font-size:45px;letter-spacing:-1px;margin:0 0 28px}.feature {margin:32px 0;font-size:25px;line-height:1.5;color:var(--cp-muted)}.feature strong {display:block;color:var(--cp-text);font-size:28px;margin-bottom:5px}.feature strong:before{content:'◆';color:var(--cp-accent);font-size:15px;margin-right:15px}
-.dock-wrap {position:absolute;right:270px;top:158px;width:448px;height:1010px;border:1px solid var(--cp-border-strong);border-radius:var(--cp-radius);overflow:hidden;box-shadow:0 20px 70px color-mix(in srgb,var(--cp-background),transparent 30%)}
-.dock-wrap iframe {width:400px;height:902px;transform:scale(1.12);transform-origin:top left;border:0;background:var(--cp-background)}
-.diagram {position:absolute;left:0;top:290px;width:1920px;height:820px}.node{position:absolute;width:300px;height:160px;padding:30px;border:1px solid var(--cp-border-strong);border-radius:var(--cp-radius);background:var(--cp-surface)}.node .eyebrow{color:var(--cp-accent-muted);font-size:15px;letter-spacing:2px;margin-bottom:12px}.node strong{display:block;font-size:29px;font-weight:500}.node small{display:block;font-size:19px;color:var(--cp-muted);margin-top:12px}.node.server{border-color:var(--cp-accent);height:200px;top:330px}
-.node.mic{left:88px;top:350px}.node.engine{left:510px;top:350px}.node.flux{left:510px;top:40px}.node.server{left:960px}.node.surfaces{left:1450px;top:170px}.node.twitch{left:1450px;top:580px}.diagram svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}.wire{stroke:var(--cp-accent-muted);stroke-width:2.5;fill:none}.wire-label{fill:var(--cp-muted);font:19px Arial,Helvetica,sans-serif}.protocol{font-size:17px}
+.dock-wrap {position:absolute;right:120px;top:20px;width:578px;height:1180px;border:1px solid var(--cp-border-strong);border-radius:var(--cp-radius);overflow:hidden;box-shadow:0 20px 70px color-mix(in srgb,var(--cp-background),transparent 30%)}
+.dock-wrap iframe {width:400px;height:818px;transform:scale(1.44);transform-origin:top left;border:0;background:var(--cp-background)}
+.diagram {position:absolute;left:0;top:290px;width:1920px;height:820px}.node{position:absolute;width:360px;height:160px;padding:30px;border:1px solid var(--cp-border-strong);border-radius:var(--cp-radius);background:var(--cp-surface)}.node .eyebrow{color:var(--cp-accent-muted);font-size:15px;letter-spacing:2px;margin-bottom:12px}.node strong{display:block;font-size:29px;font-weight:500}.node small{display:block;font-size:19px;color:var(--cp-muted);margin-top:12px}.node.server{border-color:var(--cp-accent);height:200px;top:330px}
+.node.mic{left:88px;top:350px;width:320px}.node.engine{left:500px;top:350px}.node.flux{left:500px;top:40px}.node.server{left:1020px}.node.surfaces{left:1490px;top:170px}.node.twitch{left:1490px;top:580px}.diagram svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}.wire{stroke:var(--cp-accent-muted);stroke-width:2.5;fill:none}.wire-label{fill:var(--cp-muted);font:19px Arial,Helvetica,sans-serif}.protocol{font-size:17px}
 </style>
 </head><body>
 <div class="brand"><span>◆</span>CHECKPOINT</div>
@@ -48,13 +48,13 @@ body {background:var(--cp-background);color:var(--cp-text);font-family:var(--cp-
  <div class="diagram">
   <svg viewBox="0 0 1920 820" aria-label="Audio, hypotheses, UI state and Twitch delivery">
    <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8" fill="var(--cp-accent-muted)"/></marker></defs>
-   <path class="wire" d="M388 430H500" marker-end="url(#arrow)"/><text class="wire-label protocol" x="405" y="409">PCM</text>
-   <path class="wire" d="M630 350V210" marker-end="url(#arrow)"/><path class="wire" d="M690 210V350" marker-end="url(#arrow)"/>
-   <text class="wire-label" x="605" y="270" text-anchor="end">Audio</text><text class="wire-label" x="735" y="270">Turns</text>
-   <path class="wire" d="M810 430H950" marker-end="url(#arrow)"/><text class="wire-label protocol" x="832" y="408">Hypotheses</text>
-   <path class="wire" d="M1260 380H1345V250H1440" marker-end="url(#arrow)"/><text class="wire-label" x="1290" y="224">Live state</text>
-   <path class="wire" d="M1260 470H1340V620H1440" marker-end="url(#arrow)"/><text class="wire-label" x="1145" y="583">Threaded reply</text>
-   <path class="wire" d="M1450 700H1100V540" marker-end="url(#arrow)"/><text class="wire-label" x="1180" y="738">EventSub</text>
+   <path class="wire" d="M408 430H490" marker-end="url(#arrow)"/><text class="wire-label protocol" x="425" y="409">PCM</text>
+   <path class="wire" d="M650 350V210" marker-end="url(#arrow)"/><path class="wire" d="M710 210V350" marker-end="url(#arrow)"/>
+   <text class="wire-label" x="625" y="270" text-anchor="end">Audio</text><text class="wire-label" x="755" y="270">Turns</text>
+   <path class="wire" d="M860 430H1010" marker-end="url(#arrow)"/><text class="wire-label protocol" x="884" y="408">Hypotheses</text>
+   <path class="wire" d="M1380 380H1440V250H1480" marker-end="url(#arrow)"/><text class="wire-label" x="1300" y="224">Live state</text>
+   <path class="wire" d="M1380 470H1430V620H1480" marker-end="url(#arrow)"/><text class="wire-label" x="1450" y="540">Threaded reply</text>
+   <path class="wire" d="M1490 700H1180V540" marker-end="url(#arrow)"/><text class="wire-label" x="1260" y="738">EventSub</text>
   </svg>
   <div class="node mic"><div class="eyebrow">BROWSER</div><strong>Mic page</strong><small>16 kHz mono PCM</small></div>
   <div class="node engine"><div class="eyebrow">LOCAL · WSL</div><strong>STT engine</strong><small>Reconnects + word timing</small></div>

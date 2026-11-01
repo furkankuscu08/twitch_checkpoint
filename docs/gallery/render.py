@@ -121,6 +121,9 @@ def capture(page, base, name, target):
         frame.wait_for_function("window.checkpointReady === true")
         frame.evaluate("document.fonts.ready")
     if name == "overlay-answer":
+        page.frames[1].add_style_tag(
+            content="#stage { transform: scale(1.3); transform-origin: bottom right; }"
+        )
         page.frame_locator("iframe").locator("#stamp").wait_for(state="visible")
     page.screenshot(path=str(target), animations="disabled")
 
