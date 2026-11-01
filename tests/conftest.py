@@ -2,6 +2,7 @@
 
 import pytest
 
+
 @pytest.fixture
 def chat_event():
     def make(

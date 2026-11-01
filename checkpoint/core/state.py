@@ -164,7 +164,7 @@ class Checkpoint:
         if self.card is None:
             return []
         self.card.typed_answer = text
-        return self._close("answered", now)
+        return [self.card.answer_event()] + self._close("answered", now)
 
     def delete(self, message_id, *, now):
         if self.queue.get(message_id) is None:

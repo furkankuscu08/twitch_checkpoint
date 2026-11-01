@@ -94,6 +94,7 @@ def test_dock_and_overlay_share_server_state_without_real_twitch(speech):
                 step(1003.5)
                 expect(dock.locator("#pending")).to_be_visible()
                 dock.get_by_role("button", name="Cancel quote", exact=True).click()
+                expect(overlay.locator("#question")).to_have_text(questions[1])
                 dock.get_by_label("Typed answer", exact=True).fill(
                     "I use my favourite editor."
                 )
