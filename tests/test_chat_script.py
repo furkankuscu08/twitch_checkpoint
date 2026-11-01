@@ -53,7 +53,9 @@ async def scenario(tmp_path, *, fault=None):
     async def handle(request):
         state.requests.append(request)
         if request.url.path == "/oauth2/validate":
-            account = request.headers["authorization"].removeprefix("OAuth private-access-")
+            account = request.headers["authorization"].removeprefix(
+                "OAuth private-access-"
+            )
             if account == "test" and fault == "expired":
                 return httpx.Response(401, text="private-provider-body")
             if account == "test" and fault == "validation_timeout":
@@ -61,22 +63,34 @@ async def scenario(tmp_path, *, fault=None):
             return httpx.Response(
                 200,
                 json={
-                    "login": "wrong-viewer" if account == "test" and fault == "identity" else LOGINS[account],
-                    "client_id": "wrong-client" if account == "test" and fault == "client_id" else "client-id",
+                    "login": "wrong-viewer"
+                    if account == "test" and fault == "identity"
+                    else LOGINS[account],
+                    "client_id": "wrong-client"
+                    if account == "test" and fault == "client_id"
+                    else "client-id",
                     "user_id": f"id-{account}",
-                    "scopes": [] if account == "test" and fault == "scope" else ["user:write:chat"],
+                    "scopes": []
+                    if account == "test" and fault == "scope"
+                    else ["user:write:chat"],
                     "expires_in": 3600,
                 },
             )
         assert request.headers["client-id"] == "client-id"
-        account = request.headers["authorization"].removeprefix("Bearer private-access-")
+        account = request.headers["authorization"].removeprefix(
+            "Bearer private-access-"
+        )
         if request.url.path == "/helix/users":
             assert request.url.params["login"] == "channel"
             if account == "test" and fault == "users":
                 return httpx.Response(200, json={"data": []})
             if account == "test" and fault == "users_identity":
-                return httpx.Response(200, json={"data": [{"id": "channel-id", "login": "other"}]})
-            return httpx.Response(200, json={"data": [{"id": "channel-id", "login": "channel"}]})
+                return httpx.Response(
+                    200, json={"data": [{"id": "channel-id", "login": "other"}]}
+                )
+            return httpx.Response(
+                200, json={"data": [{"id": "channel-id", "login": "channel"}]}
+            )
         assert request.method == "POST" and request.url.path == "/helix/chat/messages"
         data = json.loads(request.content)
         assert data == {
@@ -98,7 +112,17 @@ async def scenario(tmp_path, *, fault=None):
             if fault == "malformed":
                 return httpx.Response(200, json={"data": []})
             if fault == "drop":
-                return httpx.Response(200, json={"data": [{"is_sent": False, "drop_reason": {"message": "private question"}}]})
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": [
+                            {
+                                "is_sent": False,
+                                "drop_reason": {"message": "private question"},
+                            }
+                        ]
+                    },
+                )
             if fault == "nonbool":
                 return httpx.Response(200, json={"data": [{"is_sent": "true"}]})
         return httpx.Response(200, json={"data": [{"is_sent": True}]})
@@ -119,7 +143,9 @@ def test_timed_file_order_identity_payload_and_quiet_output(tmp_path, capsys):
 
     async def run():
         async with scenario(tmp_path) as state:
-            assert await helper.run(entries(), state.auth, state.config, "CHANNEL", sleep=state.sleep) == [True, True, True]
+            assert await helper.run(
+                entries(), state.auth, state.config, "CHANNEL", sleep=state.sleep
+            ) == [True, True, True]
             assert state.delays == [0, 0.5, 1]
             assert state.sent == list(ACCOUNTS)
             assert len(state.requests) == 9
@@ -130,16 +156,40 @@ def test_timed_file_order_identity_payload_and_quiet_output(tmp_path, capsys):
     assert output.err == ""
 
 
-@pytest.mark.parametrize("fault", ["missing", "stored_identity", "expired", "identity", "client_id", "scope", "users", "users_identity", "400", "401", "timeout", "validation_timeout", "network", "malformed", "drop", "nonbool"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing",
+        "stored_identity",
+        "expired",
+        "identity",
+        "client_id",
+        "scope",
+        "users",
+        "users_identity",
+        "400",
+        "401",
+        "timeout",
+        "validation_timeout",
+        "network",
+        "malformed",
+        "drop",
+        "nonbool",
+    ],
+)
 def test_failure_is_one_attempt_and_later_entries_continue(tmp_path, capsys, fault):
     helper = module()
 
     async def run():
         async with scenario(tmp_path, fault=fault) as state:
-            assert await helper.run(entries(), state.auth, state.config, "channel", sleep=state.sleep) == [False, True, True]
+            assert await helper.run(
+                entries(), state.auth, state.config, "channel", sleep=state.sleep
+            ) == [False, True, True]
             assert state.sent.count("test") <= 1
             assert state.sent[-2:] == ["test2", "test3"]
-            assert all(request.url.path != "/oauth2/token" for request in state.requests)
+            assert all(
+                request.url.path != "/oauth2/token" for request in state.requests
+            )
             if fault == "timeout":
                 assert state.closed
 
@@ -149,14 +199,35 @@ def test_failure_is_one_attempt_and_later_entries_continue(tmp_path, capsys, fau
     assert output.err == ""
 
 
-@pytest.mark.parametrize("bad", [None, {}, "private", [], [None], [{"account": "bot", "delay_s": 0, "text": "hello"}], [{"account": "test", "delay_s": True, "text": "hello"}], [{"account": "test", "delay_s": -1, "text": "hello"}], [{"account": "test", "delay_s": float("nan"), "text": "hello"}], [{"account": "test", "delay_s": float("inf"), "text": "hello"}], [{"account": "test", "delay_s": "0", "text": "hello"}], [{"account": "test", "delay_s": 0, "text": " "}], [{"account": "test", "delay_s": 0, "text": "a" * 501}], [{"account": "test", "delay_s": 0}], [{"account": "test", "delay_s": 0, "text": "hello", "extra": 1}]])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        None,
+        {},
+        "private",
+        [],
+        [None],
+        [{"account": "bot", "delay_s": 0, "text": "hello"}],
+        [{"account": "test", "delay_s": True, "text": "hello"}],
+        [{"account": "test", "delay_s": -1, "text": "hello"}],
+        [{"account": "test", "delay_s": float("nan"), "text": "hello"}],
+        [{"account": "test", "delay_s": float("inf"), "text": "hello"}],
+        [{"account": "test", "delay_s": "0", "text": "hello"}],
+        [{"account": "test", "delay_s": 0, "text": " "}],
+        [{"account": "test", "delay_s": 0, "text": "a" * 501}],
+        [{"account": "test", "delay_s": 0}],
+        [{"account": "test", "delay_s": 0, "text": "hello", "extra": 1}],
+    ],
+)
 def test_invalid_script_rejected_before_any_delay_or_network(tmp_path, bad):
     helper = module()
 
     async def run():
         async with scenario(tmp_path) as state:
             with pytest.raises(ValueError):
-                await helper.run(bad, state.auth, state.config, "channel", sleep=state.sleep)
+                await helper.run(
+                    bad, state.auth, state.config, "channel", sleep=state.sleep
+                )
             assert state.requests == []
             assert state.delays == []
 
@@ -169,7 +240,13 @@ def test_entire_script_is_validated_before_first_send(tmp_path):
     async def run():
         async with scenario(tmp_path) as state:
             with pytest.raises(ValueError):
-                await helper.run([entries()[0], {"account": "bot"}], state.auth, state.config, "channel", sleep=state.sleep)
+                await helper.run(
+                    [entries()[0], {"account": "bot"}],
+                    state.auth,
+                    state.config,
+                    "channel",
+                    sleep=state.sleep,
+                )
             assert state.requests == []
 
     asyncio.run(run())
@@ -180,7 +257,11 @@ def test_cancel_during_attempt_stops_later_entries_without_retry(tmp_path, capsy
 
     async def run():
         async with scenario(tmp_path, fault="timeout") as state:
-            task = asyncio.create_task(helper.run(entries(), state.auth, Config(), "channel", sleep=state.sleep))
+            task = asyncio.create_task(
+                helper.run(
+                    entries(), state.auth, Config(), "channel", sleep=state.sleep
+                )
+            )
             while not state.sent:
                 await asyncio.sleep(0)
             task.cancel()
@@ -193,8 +274,17 @@ def test_cancel_during_attempt_stops_later_entries_without_retry(tmp_path, capsy
     assert capsys.readouterr().out == ""
 
 
-@pytest.mark.parametrize("content", ["not-json", '[{"account":"bot"}]', '[{"account":"test","delay_s":NaN,"text":"hello"}]'])
-def test_main_invalid_file_never_loads_credentials(tmp_path, monkeypatch, capsys, content):
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not-json",
+        '[{"account":"bot"}]',
+        '[{"account":"test","delay_s":NaN,"text":"hello"}]',
+    ],
+)
+def test_main_invalid_file_never_loads_credentials(
+    tmp_path, monkeypatch, capsys, content
+):
     helper = module()
     path = tmp_path / "script.json"
     path.write_text(content)
@@ -225,7 +315,11 @@ def test_main_success_invokes_cli_once_and_propagates_failure(monkeypatch, capsy
 def test_direct_script_entrypoint_runs_without_package_install(tmp_path):
     helper = module()
     result = subprocess.run(
-        [str(Path(__import__("sys").executable)), str(Path(helper.__file__).resolve()), str(tmp_path / "missing.json")],
+        [
+            str(Path(__import__("sys").executable)),
+            str(Path(helper.__file__).resolve()),
+            str(tmp_path / "missing.json"),
+        ],
         cwd=tmp_path,
         capture_output=True,
         text=True,
@@ -234,3 +328,61 @@ def test_direct_script_entrypoint_runs_without_package_install(tmp_path):
     assert result.returncode == 1
     assert result.stdout == "failure\n"
     assert result.stderr == ""
+
+
+def test_valid_cli_uses_only_injected_credentials_and_transport(
+    tmp_path, monkeypatch, capsys
+):
+    helper = module()
+    data = entries()
+    for item in data:
+        item["delay_s"] = 0
+    path = tmp_path / "script.json"
+    path.write_text(json.dumps(data))
+    client_class = httpx.AsyncClient
+    auth_class = TwitchAuth
+
+    async def run():
+        async with scenario(tmp_path) as state:
+            monkeypatch.setattr(helper, "settings", lambda: ("client-id", LOGINS))
+            monkeypatch.setenv("TWITCH_BROADCASTER_LOGIN", "channel")
+            monkeypatch.setattr(
+                helper.httpx,
+                "AsyncClient",
+                lambda **kwargs: client_class(
+                    transport=state.auth.client._transport, **kwargs
+                ),
+            )
+            monkeypatch.setattr(
+                helper,
+                "TwitchAuth",
+                lambda client, client_id, logins: auth_class(
+                    client, client_id, logins, state.auth.token_path
+                ),
+            )
+            assert await helper.cli(path) == [True, True, True]
+            assert state.sent == list(ACCOUNTS)
+
+    asyncio.run(run())
+    output = capsys.readouterr()
+    assert output.out == "success\nsuccess\nsuccess\n"
+    assert output.err == ""
+
+
+def test_cli_configuration_failure_reports_each_valid_entry(
+    tmp_path, monkeypatch, capsys
+):
+    helper = module()
+    path = tmp_path / "script.json"
+    path.write_text(json.dumps(entries()))
+
+    def unavailable():
+        from checkpoint.twitch_api.auth import AuthError
+
+        raise AuthError("private configuration")
+
+    monkeypatch.setattr(helper, "settings", unavailable)
+    assert helper.main([str(path)]) == 1
+    output = capsys.readouterr()
+    assert output.out == "failure\nfailure\nfailure\n"
+    assert output.err == ""
