@@ -3,7 +3,7 @@
 Three original 1920×1280 (3:2) PNG compositions, rendered locally with Playwright:
 
 - `overlay-answer.png`: the actual overlay's frozen answered-card exit, with its
-  question, exact answer and check stamp, over an original editor-like backdrop.
+  question, answer and check stamp, over an original editor-like backdrop.
 - `dock-queue.png`: the actual dock with three fictional viewers and an earlier
   answer chip. Its diamond prefix follows the application's glyph fallback.
 - `architecture.png`: audio to Flux and turns back to the engine, hypotheses to

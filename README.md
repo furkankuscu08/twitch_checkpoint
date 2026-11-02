@@ -1,10 +1,57 @@
 # Checkpoint
 
-Answer Twitch chat out loud without leaving your work. Checkpoint saves viewer messages while you focus, opens them as cards at a checkpoint, and posts your answer as a threaded reply under each viewer's message.
+> Save chat while you focus, then answer out loud. Each answer posts as a threaded reply under the viewer's message, in your transcribed words.
 
-Deepgram Flux transcribes your words live. There is no LLM, paraphrasing or transcript cleanup. You control every answer, can skip a card, and have five seconds to replace a pending quote with a plain receipt using **Cancel quote**. Repeated questions can receive an earlier answer with one click.
+Built for the Codex x TwitchCon Hackathon.
 
-Built for the Codex x TwitchCon Hackathon. See [SPEC.md](SPEC.md) for behavior and acceptance criteria.
+![The on-stream card: a viewer's question, the streamer's spoken answer and the answered stamp](docs/gallery/overlay-answer.png)
+
+When you code, draw or play live, chat keeps asking questions. Stop for each one and you lose your flow; keep working and the questions scroll away. Checkpoint saves viewer messages while you focus, opens them as cards at a natural pause, and posts your spoken answer as a threaded reply under the viewer's message. Deepgram Flux transcribes your words live; there is no LLM, paraphrasing or transcript cleanup.
+
+## How it works
+
+1. **Focus.** Turn on Focus in the dock. Messages wait in a queue, questions first; the stream shows only a small badge with the count.
+2. **Checkpoint.** At a natural pause, press **Checkpoint** in the dock. Each message opens as a card on stream with the viewer's name and question.
+3. **Answer out loud.** Your words appear live on the card. Stop talking and a short grace ring closes it, or press **Next**. **Skip** sends nothing.
+4. **Threaded reply.** The bot replies under the viewer's message with `🎙 answered on stream: "<your words>"`. It goes out after a five-second window in which **Cancel quote** swaps it for a plain receipt: `🎙 answered on stream, @name`.
+
+Read the question aloud as its own sentence first? Checkpoint recognizes the echo, greys it out and quotes only your answer. When another viewer later asks something you already answered, the dock offers your earlier answer; one click posts `📌 answered earlier on stream (N min ago): "…"` under the new question.
+
+![Checkpoint architecture](docs/gallery/architecture.png)
+
+- **Speech:** a Chrome mic page streams audio to a local engine, which streams it to Deepgram Flux (`flux-general-en`). Flux detects the end of each turn, and every word has a timestamp, so it lands on the card that was open when you said it.
+- **Server:** FastAPI around a pure, fully unit-tested core (queue, cards, echo detection, grace and cancel windows, quotes, earlier answers) with no I/O, network or clock reads.
+- **Twitch:** EventSub over WebSocket (`channel.chat.message`, `channel.chat.message_delete`) brings chat in. Helix Send Chat Message with `reply_parent_message_id` posts the threaded reply from a separate bot account.
+- **OBS:** the overlay is a browser source and the dock is a custom dock, both plain HTML, CSS and JavaScript over WebSockets.
+
+## Privacy and control
+
+- Nothing is sent without the streamer: every reply comes from a card you answered or an earlier answer you clicked.
+- A reply quotes only your transcribed words, or is a plain receipt. Nothing is summarized, paraphrased or autocorrected.
+- Only microphone audio goes to Deepgram. Chat text, questions and word lists never do.
+- Message text and transcripts stay out of the default logs; transcripts are saved only if you ask for it (`--save-hyps`). State lives in memory only; the only runtime file is `data/tokens.json`.
+- Blocklisted, filtered or deleted messages never reach the overlay, and a message a moderator deletes closes its card at once.
+
+## Built with Codex
+
+Checkpoint was built with Codex in under two days: one main Codex thread, with subagents for parallel work and review.
+
+- **Spec and rules first.** [SPEC.md](SPEC.md) defines the behavior, messages and seven work packages with acceptance criteria. [AGENTS.md](AGENTS.md) holds the rules Codex followed: never invent an answer, nothing sent without the streamer, no speech-recognition biasing, a pure core. Each package was planned before coding.
+- **Tests first.** For each package, Codex wrote failing tests from the acceptance criteria. WP1 went from 62 failed to 194 passed.
+- **Parallel subagents.** Three subagents built the overlay, the dock and the chat tooling, each in its own git worktree and branch; the main thread reviewed and merged them.
+- **It checked its own UI.** Codex captured the overlay and dock with Playwright (`scripts/shoot.py`), looked at the screenshots and fixed what it saw, such as low overlay contrast and an overflowing dock name.
+- **Independent review.** A review subagent checked the repository against the P0/P1 list in AGENTS.md and found three P1 bugs. All were fixed and rechecked.
+- **Live on Twitch.** Live tests send a real message from a test viewer and verify the bot's threaded reply.
+
+Today: 342 tests, 31 browser tests (Playwright) and 7 live checks against Twitch and Deepgram; ruff clean.
+
+## Limitations
+
+- English only (Deepgram Flux `flux-general-en`).
+- One channel per running instance; state resets on restart.
+- Speech recognition can mishear. Checkpoint never edits the transcript; **Cancel quote** sends a plain receipt instead.
+- The verified setup is Linux/WSL with the mic page in Chrome.
+- The bot account must be a moderator in the channel.
 
 ## Try it without keys
 
@@ -67,7 +114,7 @@ The default server port is 8200. To use another port, run `APP_PORT=8300 ./scrip
    ./scripts/run_all.sh
    ```
 
-   Extra arguments are passed unchanged to the mic engine. Save hypotheses for the WP7 rehearsal with:
+   Extra arguments are passed unchanged to the mic engine. Save speech hypotheses for tuning with:
 
    ```bash
    ./scripts/run_all.sh --save-hyps data/rehearsal-hyps.jsonl
@@ -81,7 +128,9 @@ For OBS, add `http://localhost:8200/overlay/` as a **1920 × 1080 browser source
 
 State is in memory and resets on restart. The token store is `data/tokens.json`; requested speech logs also stay under ignored `data/`. Debug chat is available only with server `--demo` or `CHECKPOINT_DEBUG=1`; injected replies are never sent to Twitch. `CHECKPOINT_DEBUG=1` alone does not disable normal Twitch intake, so use `--demo` for a fully local session.
 
-## Timed chat and verification
+## Development
+
+### Timed chat
 
 Create a JSON file containing a timed list, for example:
 
@@ -97,6 +146,8 @@ uv run python scripts/chat_script.py data/chat.json
 ```
 
 The helper validates the complete file before network activity, waits each delay after the previous attempt finishes, and makes one attempt per entry. It prints only `success` or `failure`, never message text or tokens. It does not refresh tokens; use the refresh command first.
+
+### Tests and rehearsal
 
 ```bash
 uv run pytest
@@ -118,7 +169,7 @@ wait, and stops its server on exit:
 uv run python scripts/dry_run.py --scenario docs/private/demo
 ```
 
-The scenario directory is private and gitignored. Supply `part1.json` (four
+The scenario files are private and not in the repository. Supply `part1.json` (four
 timed messages), `part2.json` (one repeated question), and `replay.json`:
 
 ```json
@@ -139,13 +190,13 @@ so their success toast is covered separately with a fake sender in browser tests
 The [Devpost gallery](docs/gallery/README.md) contains three original 1920×1280
 images and their local Playwright renderer.
 
-![Checkpoint architecture](docs/gallery/architecture.png)
+### Live checks
 
 ```bash
 uv run pytest -m live
 ```
 
-Live checks require configured credentials and saved tokens. They contact Twitch and Deepgram; the WP6 check uses `test2` (`pixelmoth01`), sends `how long have you been coding?`, and replies with the exact typed answer `About ten years now, mostly Python.` as a threaded bot quote. Refresh the selected viewer token before running. Do not run live checks during a recording unless you want that chat visible.
+Live checks require configured credentials and saved tokens. They contact Twitch and Deepgram; the WP6 check uses `test2` (`pixelmoth01`), sends `how long have you been coding?`, and replies with the typed answer `About ten years now, mostly Python.` as a threaded bot quote. Refresh the selected viewer token before running. Do not run live checks during a recording unless you want that chat visible.
 
 ## Relation to Minefield
 

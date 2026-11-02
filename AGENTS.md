@@ -10,7 +10,7 @@ Checkpoint: a Twitch tool for the Codex x TwitchCon Hackathon. While the streame
 - STT: Deepgram Flux (`flux-general-en`, EU endpoint) over plain `websockets`, with no SDK, no local model and no GPU.
 - Web: plain HTML/CSS/JS in `web/`, with no framework and no build step. The pages run as OBS browser sources.
 - Sounds are synthesized at runtime with the WebAudio API; there are no audio files.
-- Dev only: Playwright (Chromium) for headless screenshots (`scripts/shoot.py`).
+- Dev only: Playwright (Chromium) for headless screenshots (`scripts/shoot.py`), browser tests and the gallery renderer.
 - **Reused code:** `checkpoint/stt`, `web/mic` and `checkpoint/twitch_api` are adapted from the author's other entry in this hackathon (Minefield). Keep their tested behaviour: reconnects, one-attempt chat sends, token refresh rules. Change names and ports only where needed.
 
 ## Commands
@@ -25,6 +25,9 @@ uv run python -m checkpoint.stt --mic     # STT engine, live (open http://localh
 uv run python scripts/shoot.py PAGE       # screenshots of overlay/dock into data/shots/
 uv run python scripts/chat_script.py FILE # send a timed list of chat messages from the test accounts
 uv run pytest -m live                     # live checks against Twitch (needs .env and data/tokens.json)
+uv run pytest -m browser                  # Playwright browser tests
+uv run python scripts/dry_run.py --scenario DIR  # local four-card rehearsal
+uv run python docs/gallery/render.py      # Devpost gallery images
 ```
 
 The default ports are `APP_PORT=8200` and `ENGINE_AUDIO_PORT=8766`. Both can be overridden by environment variables.

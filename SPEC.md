@@ -1,6 +1,6 @@
 # Checkpoint: technical spec (draft v2)
 
-> Answer chat out loud. Every viewer gets your own words, threaded under their message.
+> Answer chat out loud. Each answered message gets your own words, threaded under it.
 
 When a streamer is deep in focused work (coding, drawing, building), chat piles up unanswered. Checkpoint collects those messages while the streamer works. At a checkpoint, the streamer answers them one by one **by voice**, without leaving the work. Streaming speech recognition (Deepgram Flux) writes the spoken answer onto an on-stream card, and the bot posts it as a threaded reply under the viewer's own message: `🎙 answered on stream: "…"`.
 

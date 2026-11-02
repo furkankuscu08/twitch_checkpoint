@@ -40,11 +40,11 @@ body {background:var(--cp-background);color:var(--cp-text);font-family:var(--cp-
 </section>
 <section id="dock-image" hidden>
  <header class="heading"><h1>Answer once.<br>Save it for later.</h1><p class="lead" style="max-width:760px">A quiet control room for the conversation.</p></header>
- <div class="dock-copy"><div class="feature"><strong>Questions stay in reach</strong>Collect while you build.<br>Open a checkpoint when you’re ready.</div><div class="feature"><strong>Your answer, already there</strong>A repeated question gets an earlier-answer chip.<br>One click shares the exact words again.</div><div class="feature"><strong>You make the call</strong>Next, Skip, or Cancel quote.<br>Nothing replies without your action.</div></div>
+ <div class="dock-copy"><div class="feature"><strong>Questions stay in reach</strong>Collect while you build.<br>Open a checkpoint when you’re ready.</div><div class="feature"><strong>Your answer, already there</strong>A repeated question gets an earlier-answer chip.<br>One click quotes your earlier answer again.</div><div class="feature"><strong>You make the call</strong>Next, Skip, or Cancel quote.<br>Nothing replies without your action.</div></div>
  <div class="dock-wrap"><iframe title="Actual Checkpoint dock"></iframe></div>
 </section>
 <section id="architecture-image" hidden>
- <header class="heading"><h1>A small pipeline. Your exact words.</h1><p class="lead">Speech recognition transcribes. The streamer decides what gets sent.</p></header>
+ <header class="heading"><h1>A small pipeline. Your words, never rewritten.</h1><p class="lead">Speech recognition transcribes. The streamer decides what gets sent.</p></header>
  <div class="diagram">
   <svg viewBox="0 0 1920 820" aria-label="Audio, hypotheses, UI state and Twitch delivery">
    <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8" fill="var(--cp-accent-muted)"/></marker></defs>
@@ -59,7 +59,7 @@ body {background:var(--cp-background);color:var(--cp-text);font-family:var(--cp-
   <div class="node mic"><div class="eyebrow">BROWSER</div><strong>Mic page</strong><small>16 kHz mono PCM</small></div>
   <div class="node engine"><div class="eyebrow">LOCAL · WSL</div><strong>STT engine</strong><small>Reconnects + word timing</small></div>
   <div class="node flux"><div class="eyebrow">SPEECH TO TEXT</div><strong>Deepgram Flux</strong><small>Streaming turns · EU</small></div>
-  <div class="node server"><div class="eyebrow">PURE CORE + LOCAL I/O</div><strong>Server</strong><small>Queue · cards · exact quotes<br>Grace + cancel window</small></div>
+  <div class="node server"><div class="eyebrow">PURE CORE + LOCAL I/O</div><strong>Server</strong><small>Queue · cards · quotes<br>Grace + cancel window</small></div>
   <div class="node surfaces"><div class="eyebrow">BROWSER SOURCES</div><strong>Overlay + dock</strong><small>Cards + streamer controls</small></div>
   <div class="node twitch"><div class="eyebrow">CHAT IN · REPLIES OUT</div><strong>Twitch</strong><small>Under the viewer’s message</small></div>
  </div>
