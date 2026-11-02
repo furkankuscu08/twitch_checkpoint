@@ -15,7 +15,7 @@ When you code, draw or play live, chat keeps asking questions. Stop for each one
 3. **Answer out loud.** Your words appear live on the card. Stop talking and a short grace ring closes it, or press **Next**. **Skip** sends nothing.
 4. **Threaded reply.** The bot replies under the viewer's message with `🎙 answered on stream: "<your words>"`. It goes out after a five-second window in which **Cancel quote** swaps it for a plain receipt: `🎙 answered on stream, @name`.
 
-Read the question aloud as its own sentence first? Checkpoint recognizes the echo, greys it out and quotes only your answer. When another viewer later asks something you already answered, the dock offers your earlier answer; one click posts `📌 answered earlier on stream (N min ago): "…"` under the new question.
+Read the question aloud first, as its own turn (pause after it)? Checkpoint recognizes the echo, greys it out and quotes only your answer. When another viewer later asks something you already answered, the dock offers your earlier answer; one click posts `📌 answered earlier on stream (N min ago): "…"` under the new question.
 
 ![Checkpoint architecture](docs/gallery/architecture.png)
 
@@ -30,20 +30,20 @@ Read the question aloud as its own sentence first? Checkpoint recognizes the ech
 - A reply quotes only your transcribed words, or is a plain receipt. Nothing is summarized, paraphrased or autocorrected.
 - Only microphone audio goes to Deepgram. Chat text, questions and word lists never do.
 - Message text and transcripts stay out of the default logs; transcripts are saved only if you ask for it (`--save-hyps`). State lives in memory only; the only runtime file is `data/tokens.json`.
-- Blocklisted, filtered or deleted messages never reach the overlay, and a message a moderator deletes closes its card at once.
+- Blocklisted or filtered messages never reach the overlay. A message a moderator deletes leaves the queue; if it is on the open card, the card closes at once with no reply.
 
 ## Built with Codex
 
-Checkpoint was built with Codex in under two days: one main Codex thread, with subagents for parallel work and review.
+Checkpoint was built with Codex in under two days: one main Codex thread, with subagents for parallel work and review. After the spec was written, the core app (work packages 1–6) took one afternoon; the rest went into live tests on Twitch, rehearsal and the demo.
 
 - **Spec and rules first.** [SPEC.md](SPEC.md) defines the behavior, messages and seven work packages with acceptance criteria. [AGENTS.md](AGENTS.md) holds the rules Codex followed: never invent an answer, nothing sent without the streamer, no speech-recognition biasing, a pure core. Each package was planned before coding.
-- **Tests first.** For each package, Codex wrote failing tests from the acceptance criteria. WP1 went from 62 failed to 194 passed.
+- **Tests first.** For each package, Codex wrote failing tests from the acceptance criteria. The first core test run had 62 failures; at the end of that package the whole suite passed, 194 tests.
 - **Parallel subagents.** Three subagents built the overlay, the dock and the chat tooling, each in its own git worktree and branch; the main thread reviewed and merged them.
 - **It checked its own UI.** Codex captured the overlay and dock with Playwright (`scripts/shoot.py`), looked at the screenshots and fixed what it saw, such as low overlay contrast and an overflowing dock name.
 - **Independent review.** A review subagent checked the repository against the P0/P1 list in AGENTS.md and found three P1 bugs. All were fixed and rechecked.
 - **Live on Twitch.** Live tests send a real message from a test viewer and verify the bot's threaded reply.
 
-Today: 342 tests, 31 browser tests (Playwright) and 7 live checks against Twitch and Deepgram; ruff clean.
+Today: 342 unit and integration tests, 31 browser tests (Playwright) and 7 live checks against Twitch and Deepgram; ruff clean.
 
 ## Limitations
 
