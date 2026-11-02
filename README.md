@@ -2,7 +2,7 @@
 
 > Save chat while you focus, then answer out loud. Each answer posts as a threaded reply under the viewer's message, in your transcribed words.
 
-Built for the Codex x TwitchCon Hackathon.
+Built for the Codex x TwitchCon Hackathon. **Demo video (3 min):** https://youtu.be/hw79ofGbx1M
 
 ![The on-stream card: a viewer's question, the streamer's spoken answer and the answered stamp](docs/gallery/overlay-answer.png)
 
